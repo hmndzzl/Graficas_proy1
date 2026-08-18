@@ -56,7 +56,13 @@ fn render_map(
 
     for (row, line) in maze.iter().enumerate() {
         for (col, &cell) in line.iter().enumerate() {
-            draw_cell(framebuffer, offset_x + col * block_size, offset_y + row * block_size, block_size, cell);
+            draw_cell(
+                framebuffer,
+                offset_x + col * block_size,
+                offset_y + row * block_size,
+                block_size,
+                cell,
+            );
         }
     }
 
@@ -75,7 +81,16 @@ fn render_map(
     for i in 0..NUM_RAYS {
         let ray_fraction = i as f32 / (NUM_RAYS - 1).max(1) as f32;
         let angle = player.a - FOV / 2.0 + FOV * ray_fraction;
-        cast_ray(framebuffer, maze, player, angle, BLOCK_SIZE, offset_x, offset_y, scale);
+        cast_ray(
+            framebuffer,
+            maze,
+            player,
+            angle,
+            BLOCK_SIZE,
+            offset_x,
+            offset_y,
+            scale,
+        );
     }
 }
 
@@ -141,6 +156,39 @@ fn render3d(framebuffer: &mut Framebuffer, maze: &Maze, player: &Player) {
     render_map(framebuffer, maze, player, minimap_block_size, offset_x, 0);
 }
 
+fn draw_success_screen(framebuffer: &mut Framebuffer) {
+    framebuffer.set_background_color(0x000000); // Negro
+    framebuffer.clear();
+
+    let win_text = [
+        " !  N   N III V   V EEEE L      CCC  OOO  M   M PPPP  L    EEEE TTTTT  AAA  DDDD   OOO   ! ",
+        "    NN  N  I  V   V E    L     C    O   O MM MM P   P L    E      T   A   A D   D O   O  ! ",
+        " !  N N N  I  V   V EEEE L     C    O   O M M M PPPP  L    EEEE   T   AAAAA D   D O   O  ! ",
+        " !  N  NN  I   V V  E    L     C    O   O M   M P     L    E      T   A   A D   D O   O    ",
+        " !  N   N III   V   EEEE LLLL   CCC  OOO  M   M P     LLLL EEEE   T   A   A DDDD   OOO   ! ",
+    ];
+
+    let pixel_size = 12;
+    let start_x = framebuffer.width / 2 - (win_text[0].len() * pixel_size) / 2;
+    let start_y = framebuffer.height / 2 - (win_text.len() * pixel_size) / 2;
+
+    framebuffer.set_current_color(0xFFD700); // Dorado
+
+    for (row, line) in win_text.iter().enumerate() {
+        for (col, ch) in line.chars().enumerate() {
+            if ch != ' ' {
+                let x = start_x + col * pixel_size;
+                let y = start_y + row * pixel_size;
+                for dy in 0..pixel_size {
+                    for dx in 0..pixel_size {
+                        framebuffer.point(x + dx, y + dy);
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn main() {
     let window_width = 1300;
     let window_height = 900;
@@ -162,34 +210,41 @@ fn main() {
 
     let mut is_3d_mode = true;
     let mut last_m_pressed = false;
+    let mut win_state = false;
 
     let target_frame_time = Duration::from_millis(1000 / 60); // ~16.6 ms per frame for 60 FPS
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let frame_start = Instant::now();
 
-        let m_pressed = window.is_key_down(Key::M);
-        if m_pressed && !last_m_pressed {
-            is_3d_mode = !is_3d_mode;
-        }
-        last_m_pressed = m_pressed;
-        process_events(&window, &mut player, &maze, BLOCK_SIZE);
+        if !win_state {
+            let m_pressed = window.is_key_down(Key::M);
+            if m_pressed && !last_m_pressed {
+                is_3d_mode = !is_3d_mode;
+            }
+            last_m_pressed = m_pressed;
+            process_events(&window, &mut player, &maze, BLOCK_SIZE);
 
-        // ¿el jugador llegó a la meta? Se traduce su posición en píxeles a la
-        // celda que ocupa y se revisa si esa celda es la marca `g`.
-        let i = player.pos.x as usize / BLOCK_SIZE;
-        let j = player.pos.y as usize / BLOCK_SIZE;
-        if maze.get(j).and_then(|row| row.get(i)) == Some(&'g') {
-            println!("¡Meta alcanzada! Fin del juego.");
-            break;
+            // ¿el jugador llegó a la meta? Se traduce su posición en píxeles a la
+            // celda que ocupa y se revisa si esa celda es la marca `g`.
+            let i = player.pos.x as usize / BLOCK_SIZE;
+            let j = player.pos.y as usize / BLOCK_SIZE;
+            if maze.get(j).and_then(|row| row.get(i)) == Some(&'g') {
+                println!("¡Meta alcanzada! Has ganado.");
+                win_state = true;
+            }
         }
 
         framebuffer.clear();
 
-        if is_3d_mode {
-            render3d(&mut framebuffer, &maze, &player);
+        if win_state {
+            draw_success_screen(&mut framebuffer);
         } else {
-            render2d(&mut framebuffer, &maze, &player);
+            if is_3d_mode {
+                render3d(&mut framebuffer, &maze, &player);
+            } else {
+                render2d(&mut framebuffer, &maze, &player);
+            }
         }
 
         window
