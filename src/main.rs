@@ -2,6 +2,7 @@ mod caster;
 mod framebuffer;
 mod maze;
 mod player;
+mod texture;
 
 use minifb::{Key, Window, WindowOptions};
 use std::f32::consts::PI;
@@ -11,6 +12,7 @@ use crate::caster::{cast_ray, cast_ray_3d};
 use crate::framebuffer::Framebuffer;
 use crate::maze::{Maze, load_maze};
 use crate::player::{Player, process_events};
+use crate::texture::Texture;
 
 const BLOCK_SIZE: usize = 100;
 
@@ -22,9 +24,10 @@ const FOV: f32 = PI / 3.0;
 
 fn cell_color(cell: char) -> u32 {
     match cell {
-        '+' => 0xFFFFFF,       // columnas
-        '-' => 0x00AAFF,       // paredes horizontales
-        '|' => 0xFFAAAA,       // paredes verticales
+        '+' => 0x000000,       // columnas
+        '-' => 0x222222,       // paredes horizontales
+        '|' => 0x222222,       // paredes verticales
+        'l' => 0xFFFFFF,       // luz
         'g' | 'G' => 0x00FF00, // meta
         _ => 0xFFDDDD,         // cualquier otra cosa
     }
@@ -98,7 +101,19 @@ fn render2d(framebuffer: &mut Framebuffer, maze: &Maze, player: &Player) {
     render_map(framebuffer, maze, player, BLOCK_SIZE, 0, 0);
 }
 
-fn render3d(framebuffer: &mut Framebuffer, maze: &Maze, player: &Player) {
+fn get_texture_bounds(cell: char) -> (u32, u32, u32, u32) {
+    // Retorna (start_x, start_y, width, height) en el sprite sheet
+    // Ajusta estos valores a las coordenadas reales de tu imagen
+    match cell {
+        '+' => (328, 152, 24, 64),
+        '-' => (392, 152, 24, 64),
+        '|' => (424, 152, 24, 64),
+        'l' => (8, 224, 72, 64),
+        _ => (0, 0, 24, 64),
+    }
+}
+
+fn render3d(framebuffer: &mut Framebuffer, maze: &Maze, player: &Player, texture: &Texture) {
     let num_rays = framebuffer.width;
     let hw = framebuffer.width as f32 / 2.0;
     let hh = framebuffer.height as f32 / 2.0;
@@ -108,7 +123,7 @@ fn render3d(framebuffer: &mut Framebuffer, maze: &Maze, player: &Player) {
         let ray_fraction = i as f32 / (num_rays - 1).max(1) as f32; // de 0.0 a 1.0
         let angle = player.a - (FOV / 2.0) + FOV * ray_fraction;
 
-        let (mut d, cell) = cast_ray_3d(maze, player, angle, BLOCK_SIZE);
+        let (mut d, cell, hit_x, hit_y) = cast_ray_3d(maze, player, angle, BLOCK_SIZE);
 
         // Corrección del ojo de pez (fisheye)
         d *= (angle - player.a).cos();
@@ -134,10 +149,33 @@ fn render3d(framebuffer: &mut Framebuffer, maze: &Maze, player: &Player) {
             framebuffer.point(i, y);
         }
 
-        // Dibujar pared (estaca)
+        // Dibujar pared (estaca) con texturas
         if cell != ' ' {
-            framebuffer.set_current_color(cell_color(cell));
+            let (tex_x, tex_y, tex_w, tex_h) = get_texture_bounds(cell);
+
+            // Determinar UV horizontal
+            let hit_x_block = hit_x % BLOCK_SIZE as f32;
+            let hit_y_block = hit_y % BLOCK_SIZE as f32;
+
+            let dist_x = hit_x_block.min(BLOCK_SIZE as f32 - hit_x_block);
+            let dist_y = hit_y_block.min(BLOCK_SIZE as f32 - hit_y_block);
+
+            let tx_ratio = if dist_x < dist_y {
+                hit_y_block / BLOCK_SIZE as f32
+            } else {
+                hit_x_block / BLOCK_SIZE as f32
+            };
+
+            let tx = (tx_ratio * tex_w as f32) as u32;
+
+            let wall_real_height = wall_bottom - wall_top;
+
             for y in wall_top_usize..wall_bottom_usize {
+                let ty_ratio = (y as isize - wall_top) as f32 / wall_real_height as f32;
+                let ty = (ty_ratio * tex_h as f32) as u32;
+
+                let color = texture.get_pixel_color(tex_x + tx, tex_y + ty);
+                framebuffer.set_current_color(color);
                 framebuffer.point(i, y);
             }
         }
@@ -197,6 +235,10 @@ fn main() {
 
     let (maze, mut player) = load_maze("./maze.txt", BLOCK_SIZE);
 
+    // Cargar sprite sheet
+    let texture =
+        Texture::new("./assets/textures.png").expect("No se pudo cargar ./assets/textures.png");
+
     let mut framebuffer = Framebuffer::new(framebuffer_width, framebuffer_height);
     framebuffer.set_background_color(0x333355);
 
@@ -241,7 +283,7 @@ fn main() {
             draw_success_screen(&mut framebuffer);
         } else {
             if is_3d_mode {
-                render3d(&mut framebuffer, &maze, &player);
+                render3d(&mut framebuffer, &maze, &player, &texture);
             } else {
                 render2d(&mut framebuffer, &maze, &player);
             }

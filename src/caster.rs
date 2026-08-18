@@ -39,7 +39,7 @@ pub fn cast_ray(
     }
 }
 
-pub fn cast_ray_3d(maze: &Maze, player: &Player, a: f32, block_size: usize) -> (f32, char) {
+pub fn cast_ray_3d(maze: &Maze, player: &Player, a: f32, block_size: usize) -> (f32, char, f32, f32) {
     let mut d = 0.0;
     loop {
         let x = player.pos.x + d * a.cos();
@@ -49,13 +49,13 @@ pub fn cast_ray_3d(maze: &Maze, player: &Player, a: f32, block_size: usize) -> (
         let j = y as usize / block_size;
 
         if j >= maze.len() || i >= maze[j].len() {
-            return (d, ' ');
+            return (d, ' ', x, y);
         }
 
         let cell = maze[j][i];
         if cell != ' ' {
             // we hit a wall or object
-            return (d, cell);
+            return (d, cell, x, y);
         }
 
         d += 1.0;
