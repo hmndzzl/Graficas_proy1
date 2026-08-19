@@ -447,6 +447,34 @@ fn draw_game_over_screen(framebuffer: &mut Framebuffer) {
             }
         }
     }
+
+    let prompt = [
+        "PPPP  RRRR  EEEEE SSSSS SSSSS    RRRR  ",
+        "P   P R   R E     S     S        R   R ",
+        "PPPP  RRRR  EEEEE SSSSS SSSSS    RRRR  ",
+        "P     R  R  E         S     S    R  R  ",
+        "P     R   R EEEEE SSSSS SSSSS    R   R ",
+    ];
+
+    let prompt_pixel_size = 6;
+    let prompt_x = framebuffer.width / 2 - (prompt[0].len() * prompt_pixel_size) / 2;
+    let prompt_y = start_y + text.len() * pixel_size + 60;
+
+    framebuffer.set_current_color(0xFFFFFF); // Blanco
+
+    for (row, line) in prompt.iter().enumerate() {
+        for (col, ch) in line.chars().enumerate() {
+            if ch != ' ' {
+                let x = prompt_x + col * prompt_pixel_size;
+                let y = prompt_y + row * prompt_pixel_size;
+                for dy in 0..prompt_pixel_size {
+                    for dx in 0..prompt_pixel_size {
+                        framebuffer.point(x + dx, y + dy);
+                    }
+                }
+            }
+        }
+    }
 }
 
 fn draw_main_menu(framebuffer: &mut Framebuffer) {
@@ -646,6 +674,17 @@ fn main() {
                     println!("¡Meta alcanzada! Has ganado.");
                     win_state = true;
                 }
+            }
+        } else if game_over_state {
+            if window.is_key_down(Key::R) {
+                current_level = 1;
+                let (new_maze, new_player, new_enemies) =
+                    load_level(current_level, stream_handle.as_ref(), audio_data.clone());
+                maze = new_maze;
+                player = new_player;
+                enemies = new_enemies;
+                game_over_state = false;
+                last_time = Instant::now();
             }
         }
 
