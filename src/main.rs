@@ -567,7 +567,13 @@ fn load_level(
     }
 
     let mut enemies = Vec::new();
-    let max_enemies = if level == 1 { 3 } else if level == 2 { 8 } else { 12 };
+    let max_enemies = if level == 1 {
+        3
+    } else if level == 2 {
+        8
+    } else {
+        12
+    };
     let num_enemies = empty_spaces.len().min(max_enemies);
     for idx in 0..num_enemies {
         // Simple dispersión
@@ -575,7 +581,12 @@ fn load_level(
         let (i, j) = empty_spaces[(idx * step) % empty_spaces.len()];
         let ex = (i * BLOCK_SIZE + BLOCK_SIZE / 2) as f32;
         let ey = (j * BLOCK_SIZE + BLOCK_SIZE / 2) as f32;
-        enemies.push(crate::enemy::Enemy::new(ex, ey, stream_handle, audio_data.clone()));
+        enemies.push(crate::enemy::Enemy::new(
+            ex,
+            ey,
+            stream_handle,
+            audio_data.clone(),
+        ));
     }
 
     (maze, player, enemies)
@@ -595,10 +606,13 @@ fn main() {
         }
     };
 
-    let audio_data = std::fs::read("./assets/SAT.mp3").ok().map(std::sync::Arc::new);
+    let audio_data = std::fs::read("./assets/SAT.mp3")
+        .ok()
+        .map(std::sync::Arc::new);
 
     let mut current_level = 1;
-    let (mut maze, mut player, mut enemies) = load_level(current_level, stream_handle.as_ref(), audio_data.clone());
+    let (mut maze, mut player, mut enemies) =
+        load_level(current_level, stream_handle.as_ref(), audio_data.clone());
 
     // Cargar texturas
     let texture =
@@ -660,10 +674,15 @@ fn main() {
             let j = player.pos.y as usize / BLOCK_SIZE;
             if maze.get(j).and_then(|row| row.get(i)) == Some(&'g') {
                 if current_level < 3 {
-                    println!("¡Nivel {} completado! Cargando nivel {}...", current_level, current_level + 1);
+                    println!(
+                        "¡Nivel {} completado! Cargando nivel {}...",
+                        current_level,
+                        current_level + 1
+                    );
                     current_level += 1;
                     let current_hp = player.hp;
-                    let (new_maze, mut new_player, new_enemies) = load_level(current_level, stream_handle.as_ref(), audio_data.clone());
+                    let (new_maze, mut new_player, new_enemies) =
+                        load_level(current_level, stream_handle.as_ref(), audio_data.clone());
                     maze = new_maze;
                     new_player.hp = current_hp;
                     player = new_player;
@@ -725,10 +744,6 @@ fn main() {
         // Mostrar FPS y HP en el título
         let final_elapsed = frame_start.elapsed();
         let fps = 1.0 / final_elapsed.as_secs_f32();
-        window.set_title(&format!(
-            "Maze Runner - {:.0} FPS - HP: {:.0}",
-            fps,
-            player.hp.max(0.0)
-        ));
+        window.set_title(&format!("Maze Runner - {:.0} FPS", fps,));
     }
 }

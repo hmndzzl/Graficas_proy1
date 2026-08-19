@@ -13,23 +13,23 @@ pub fn process_events(window: &Window, player: &mut Player, maze: &Maze, block_s
     const MOVE_SPEED: f32 = 4.0;
     const ROTATION_SPEED: f32 = PI / 50.0;
 
-    if window.is_key_down(Key::A) {
+    if window.is_key_down(Key::A) || window.is_key_down(Key::Left) {
         player.a -= ROTATION_SPEED;
     }
 
-    if window.is_key_down(Key::D) {
+    if window.is_key_down(Key::D) || window.is_key_down(Key::Right) {
         player.a += ROTATION_SPEED;
     }
 
     let mut dx = 0.0;
     let mut dy = 0.0;
 
-    if window.is_key_down(Key::W) {
+    if window.is_key_down(Key::W) || window.is_key_down(Key::Up) {
         dx += MOVE_SPEED * player.a.cos();
         dy += MOVE_SPEED * player.a.sin();
     }
 
-    if window.is_key_down(Key::S) {
+    if window.is_key_down(Key::S) || window.is_key_down(Key::Down) {
         dx -= MOVE_SPEED * player.a.cos();
         dy -= MOVE_SPEED * player.a.sin();
     }
