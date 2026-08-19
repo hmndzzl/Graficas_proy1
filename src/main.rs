@@ -519,8 +519,10 @@ fn load_level(
 ) {
     let filename = if level == 1 {
         "./maze.txt"
-    } else {
+    } else if level == 2 {
         "./maze2.txt"
+    } else {
+        "./maze3.txt"
     };
     let (maze, player) = load_maze(filename, BLOCK_SIZE);
 
@@ -535,7 +537,7 @@ fn load_level(
     }
 
     let mut enemies = Vec::new();
-    let max_enemies = if level == 1 { 3 } else { 8 };
+    let max_enemies = if level == 1 { 3 } else if level == 2 { 8 } else { 12 };
     let num_enemies = empty_spaces.len().min(max_enemies);
     for idx in 0..num_enemies {
         // Simple dispersión
@@ -617,9 +619,9 @@ fn main() {
             let i = player.pos.x as usize / BLOCK_SIZE;
             let j = player.pos.y as usize / BLOCK_SIZE;
             if maze.get(j).and_then(|row| row.get(i)) == Some(&'g') {
-                if current_level == 1 {
-                    println!("¡Nivel 1 completado! Cargando nivel 2...");
-                    current_level = 2;
+                if current_level < 3 {
+                    println!("¡Nivel {} completado! Cargando nivel {}...", current_level, current_level + 1);
+                    current_level += 1;
                     let current_hp = player.hp;
                     let (new_maze, mut new_player, new_enemies) = load_level(current_level);
                     maze = new_maze;
