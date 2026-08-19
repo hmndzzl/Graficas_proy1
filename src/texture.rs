@@ -1,4 +1,4 @@
-use image::{GenericImageView};
+use image::GenericImageView;
 
 pub struct Texture {
     pub width: u32,
@@ -20,14 +20,18 @@ impl Texture {
                 let g = pixel[1] as u32;
                 let b = pixel[2] as u32;
                 let a = pixel[3] as u32;
-                
+
                 // Pack to ARGB (Minifb default layout is XRGB or ARGB)
                 let color = (a << 24) | (r << 16) | (g << 8) | b;
                 pixels.push(color);
             }
         }
 
-        Ok(Texture { width, height, pixels })
+        Ok(Texture {
+            width,
+            height,
+            pixels,
+        })
     }
 
     pub fn get_pixel_color(&self, tx: u32, ty: u32) -> u32 {

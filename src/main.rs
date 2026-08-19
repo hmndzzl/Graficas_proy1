@@ -24,10 +24,11 @@ const FOV: f32 = PI / 3.0;
 
 fn cell_color(cell: char) -> u32 {
     match cell {
-        '+' => 0x000000,       // columnas
-        '-' => 0x222222,       // paredes horizontales
-        '|' => 0x222222,       // paredes verticales
-        'l' => 0xFFFFFF,       // luz
+        '0' => 0x222222,       // columnas
+        '1' => 0x222222,       // paredes 1
+        '2' => 0x222222,       // paredes 2
+        '3' => 0x222222,       // paredes 3
+        '4' => 0xFFFFFF,       // luz
         'g' | 'G' => 0x00FF00, // meta
         _ => 0xFFDDDD,         // cualquier otra cosa
     }
@@ -105,10 +106,12 @@ fn get_texture_bounds(cell: char) -> (u32, u32, u32, u32) {
     // Retorna (start_x, start_y, width, height) en el sprite sheet
     // Ajusta estos valores a las coordenadas reales de tu imagen
     match cell {
-        '+' => (328, 152, 24, 64),
-        '-' => (392, 152, 24, 64),
-        '|' => (424, 152, 24, 64),
-        'l' => (8, 224, 72, 64),
+        '0' => (328, 152, 24, 64),
+        '1' => (360, 152, 24, 64),
+        '2' => (392, 152, 24, 64),
+        '3' => (424, 152, 24, 64),
+        '4' => (8, 224, 72, 64),
+        'g' => (464, 224, 46, 64),
         _ => (0, 0, 24, 64),
     }
 }
