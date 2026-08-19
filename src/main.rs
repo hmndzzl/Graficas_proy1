@@ -1,9 +1,9 @@
 mod caster;
+mod enemy;
 mod framebuffer;
 mod maze;
 mod player;
 mod texture;
-mod enemy;
 
 use minifb::{Key, Window, WindowOptions};
 use std::f32::consts::PI;
@@ -208,7 +208,9 @@ fn render3d(
     sorted_enemies.sort_by(|a, b| {
         let dist_a = (a.pos.x - player.pos.x).powi(2) + (a.pos.y - player.pos.y).powi(2);
         let dist_b = (b.pos.x - player.pos.x).powi(2) + (b.pos.y - player.pos.y).powi(2);
-        dist_b.partial_cmp(&dist_a).unwrap_or(std::cmp::Ordering::Equal)
+        dist_b
+            .partial_cmp(&dist_a)
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
 
     for enemy in sorted_enemies {
@@ -218,13 +220,17 @@ fn render3d(
 
         // Ángulo del enemigo con respecto al jugador
         let enemy_angle = dy.atan2(dx);
-        
+
         // Diferencia de ángulo entre el jugador y el enemigo
         let mut angle_diff = enemy_angle - player.a;
-        
+
         // Normalizar el ángulo de diferencia entre -PI y PI
-        while angle_diff < -PI { angle_diff += 2.0 * PI; }
-        while angle_diff > PI { angle_diff -= 2.0 * PI; }
+        while angle_diff < -PI {
+            angle_diff += 2.0 * PI;
+        }
+        while angle_diff > PI {
+            angle_diff -= 2.0 * PI;
+        }
 
         // Si el enemigo está detrás de la cámara, ignorarlo
         if angle_diff.abs() > FOV {
@@ -232,7 +238,9 @@ fn render3d(
         }
 
         let corrected_dist = distance * angle_diff.cos();
-        if corrected_dist < 1.0 { continue; } // Evitar divisiones por cero o muy pequeñas
+        if corrected_dist < 1.0 {
+            continue;
+        } // Evitar divisiones por cero o muy pequeñas
 
         // Tamaño del sprite en pantalla
         let sprite_height = (BLOCK_SIZE as f32 / corrected_dist) * d_to_plane;
@@ -252,7 +260,7 @@ fn render3d(
         for x in sprite_left..sprite_right {
             if x >= 0 && x < framebuffer.width as isize {
                 let ux = x as usize;
-                
+
                 // Z-buffer check
                 if corrected_dist < z_buffer[ux] {
                     let tx = ((x - sprite_left) as f32 / sprite_width * tex_w) as u32;
@@ -263,7 +271,7 @@ fn render3d(
                     for y in y_top..y_bottom {
                         let ty = ((y as isize - sprite_top) as f32 / sprite_height * tex_h) as u32;
                         let color = enemy_texture.get_pixel_color(tx, ty);
-                        
+
                         // Ignorar píxeles transparentes (asumiendo que alpha > 0 es opaco)
                         let alpha = (color >> 24) & 0xFF;
                         if alpha > 0 {
@@ -316,23 +324,30 @@ fn draw_success_screen(framebuffer: &mut Framebuffer) {
     }
 }
 
-fn draw_text(framebuffer: &mut Framebuffer, x: usize, y: usize, text: &str, size: usize, color: u32) {
+fn draw_text(
+    framebuffer: &mut Framebuffer,
+    x: usize,
+    y: usize,
+    text: &str,
+    size: usize,
+    color: u32,
+) {
     let font = [
-        [1,1,1, 1,0,1, 1,0,1, 1,0,1, 1,1,1], // 0
-        [0,1,0, 1,1,0, 0,1,0, 0,1,0, 1,1,1], // 1
-        [1,1,1, 0,0,1, 1,1,1, 1,0,0, 1,1,1], // 2
-        [1,1,1, 0,0,1, 1,1,1, 0,0,1, 1,1,1], // 3
-        [1,0,1, 1,0,1, 1,1,1, 0,0,1, 0,0,1], // 4
-        [1,1,1, 1,0,0, 1,1,1, 0,0,1, 1,1,1], // 5
-        [1,1,1, 1,0,0, 1,1,1, 1,0,1, 1,1,1], // 6
-        [1,1,1, 0,0,1, 0,1,0, 0,1,0, 0,1,0], // 7
-        [1,1,1, 1,0,1, 1,1,1, 1,0,1, 1,1,1], // 8
-        [1,1,1, 1,0,1, 1,1,1, 0,0,1, 1,1,1], // 9
+        [1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1], // 0
+        [0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1], // 1
+        [1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1], // 2
+        [1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1], // 3
+        [1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1], // 4
+        [1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1], // 5
+        [1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1], // 6
+        [1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0], // 7
+        [1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1], // 8
+        [1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1], // 9
     ];
-    let slash = [0,0,1, 0,0,1, 0,1,0, 1,0,0, 1,0,0];
+    let slash = [0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0];
 
     framebuffer.set_current_color(color);
-    
+
     let mut cursor_x = x;
     for ch in text.chars() {
         let bitmap = match ch {
@@ -340,7 +355,7 @@ fn draw_text(framebuffer: &mut Framebuffer, x: usize, y: usize, text: &str, size
             '/' => &slash,
             _ => continue,
         };
-        
+
         for (i, &pixel) in bitmap.iter().enumerate() {
             if pixel == 1 {
                 let px = cursor_x + (i % 3) * size;
@@ -391,7 +406,14 @@ fn draw_health_bar(framebuffer: &mut Framebuffer, hp: f32) {
     let text = format!("{:.0}/100", clamped_hp);
     let text_len = text.len();
     let text_width = text_len * 4 * 2; // size=2
-    draw_text(framebuffer, x + bar_width / 2 - text_width / 2, y + 4, &text, 2, 0xFFFFFF);
+    draw_text(
+        framebuffer,
+        x + bar_width / 2 - text_width / 2,
+        y + 4,
+        &text,
+        2,
+        0xFFFFFF,
+    );
 }
 
 fn draw_game_over_screen(framebuffer: &mut Framebuffer) {
@@ -488,21 +510,20 @@ fn draw_main_menu(framebuffer: &mut Framebuffer) {
     }
 }
 
-fn main() {
-    let window_width = 1300;
-    let window_height = 900;
-    let framebuffer_width = 1300;
-    let framebuffer_height = 900;
+fn load_level(
+    level: usize,
+) -> (
+    crate::maze::Maze,
+    crate::player::Player,
+    Vec<crate::enemy::Enemy>,
+) {
+    let filename = if level == 1 {
+        "./maze.txt"
+    } else {
+        "./maze2.txt"
+    };
+    let (maze, player) = load_maze(filename, BLOCK_SIZE);
 
-    let (maze, mut player) = load_maze("./maze.txt", BLOCK_SIZE);
-
-    // Cargar texturas
-    let texture =
-        Texture::new("./assets/textures.png").expect("No se pudo cargar ./assets/textures.png");
-    let enemy_texture =
-        Texture::new("./assets/sat.png").expect("No se pudo cargar ./assets/sat.png");
-
-    // Encontrar posiciones aleatorias vacías para los enemigos
     let mut empty_spaces = Vec::new();
     for (j, row) in maze.iter().enumerate() {
         for (i, &cell) in row.iter().enumerate() {
@@ -512,10 +533,10 @@ fn main() {
             }
         }
     }
-    
-    // Generar max 3 enemigos
+
     let mut enemies = Vec::new();
-    let num_enemies = empty_spaces.len().min(3);
+    let max_enemies = if level == 1 { 3 } else { 8 };
+    let num_enemies = empty_spaces.len().min(max_enemies);
     for idx in 0..num_enemies {
         // Simple dispersión
         let step = (empty_spaces.len() / num_enemies).max(1);
@@ -524,6 +545,24 @@ fn main() {
         let ey = (j * BLOCK_SIZE + BLOCK_SIZE / 2) as f32;
         enemies.push(crate::enemy::Enemy::new(ex, ey));
     }
+
+    (maze, player, enemies)
+}
+
+fn main() {
+    let window_width = 1300;
+    let window_height = 900;
+    let framebuffer_width = 1300;
+    let framebuffer_height = 900;
+
+    let mut current_level = 1;
+    let (mut maze, mut player, mut enemies) = load_level(current_level);
+
+    // Cargar texturas
+    let texture =
+        Texture::new("./assets/textures.png").expect("No se pudo cargar ./assets/textures.png");
+    let enemy_texture =
+        Texture::new("./assets/sat.png").expect("No se pudo cargar ./assets/sat.png");
 
     let mut framebuffer = Framebuffer::new(framebuffer_width, framebuffer_height);
     framebuffer.set_background_color(0x333355);
@@ -578,8 +617,21 @@ fn main() {
             let i = player.pos.x as usize / BLOCK_SIZE;
             let j = player.pos.y as usize / BLOCK_SIZE;
             if maze.get(j).and_then(|row| row.get(i)) == Some(&'g') {
-                println!("¡Meta alcanzada! Has ganado.");
-                win_state = true;
+                if current_level == 1 {
+                    println!("¡Nivel 1 completado! Cargando nivel 2...");
+                    current_level = 2;
+                    let current_hp = player.hp;
+                    let (new_maze, mut new_player, new_enemies) = load_level(current_level);
+                    maze = new_maze;
+                    new_player.hp = current_hp;
+                    player = new_player;
+                    enemies = new_enemies;
+
+                    last_time = Instant::now();
+                } else {
+                    println!("¡Meta alcanzada! Has ganado.");
+                    win_state = true;
+                }
             }
         }
 
@@ -593,7 +645,14 @@ fn main() {
             draw_game_over_screen(&mut framebuffer);
         } else {
             if is_3d_mode {
-                render3d(&mut framebuffer, &maze, &player, &texture, &enemies, &enemy_texture);
+                render3d(
+                    &mut framebuffer,
+                    &maze,
+                    &player,
+                    &texture,
+                    &enemies,
+                    &enemy_texture,
+                );
             } else {
                 render2d(&mut framebuffer, &maze, &player);
             }
@@ -613,6 +672,10 @@ fn main() {
         // Mostrar FPS y HP en el título
         let final_elapsed = frame_start.elapsed();
         let fps = 1.0 / final_elapsed.as_secs_f32();
-        window.set_title(&format!("Maze Runner - {:.0} FPS - HP: {:.0}", fps, player.hp.max(0.0)));
+        window.set_title(&format!(
+            "Maze Runner - {:.0} FPS - HP: {:.0}",
+            fps,
+            player.hp.max(0.0)
+        ));
     }
 }
