@@ -512,6 +512,8 @@ fn draw_main_menu(framebuffer: &mut Framebuffer) {
 
 fn load_level(
     level: usize,
+    stream_handle: Option<&rodio::OutputStreamHandle>,
+    audio_data: Option<std::sync::Arc<Vec<u8>>>,
 ) -> (
     crate::maze::Maze,
     crate::player::Player,
@@ -545,7 +547,7 @@ fn load_level(
         let (i, j) = empty_spaces[(idx * step) % empty_spaces.len()];
         let ex = (i * BLOCK_SIZE + BLOCK_SIZE / 2) as f32;
         let ey = (j * BLOCK_SIZE + BLOCK_SIZE / 2) as f32;
-        enemies.push(crate::enemy::Enemy::new(ex, ey));
+        enemies.push(crate::enemy::Enemy::new(ex, ey, stream_handle, audio_data.clone()));
     }
 
     (maze, player, enemies)
@@ -557,8 +559,18 @@ fn main() {
     let framebuffer_width = 1300;
     let framebuffer_height = 900;
 
+    let (_stream, stream_handle) = match rodio::OutputStream::try_default() {
+        Ok((s, h)) => (Some(s), Some(h)),
+        Err(e) => {
+            println!("No se pudo inicializar el audio: {:?}", e);
+            (None, None)
+        }
+    };
+
+    let audio_data = std::fs::read("./assets/SAT.mp3").ok().map(std::sync::Arc::new);
+
     let mut current_level = 1;
-    let (mut maze, mut player, mut enemies) = load_level(current_level);
+    let (mut maze, mut player, mut enemies) = load_level(current_level, stream_handle.as_ref(), audio_data.clone());
 
     // Cargar texturas
     let texture =
@@ -623,7 +635,7 @@ fn main() {
                     println!("¡Nivel {} completado! Cargando nivel {}...", current_level, current_level + 1);
                     current_level += 1;
                     let current_hp = player.hp;
-                    let (new_maze, mut new_player, new_enemies) = load_level(current_level);
+                    let (new_maze, mut new_player, new_enemies) = load_level(current_level, stream_handle.as_ref(), audio_data.clone());
                     maze = new_maze;
                     new_player.hp = current_hp;
                     player = new_player;

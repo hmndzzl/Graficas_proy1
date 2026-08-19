@@ -11,3 +11,4 @@ debug = false
 image = "0.25.10"
 minifb = "0.28.0"
 nalgebra-glm = "0.21.0"
+rodio = "0.17.3"

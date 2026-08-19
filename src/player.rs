@@ -1,7 +1,7 @@
+use crate::maze::Maze;
 use minifb::{Key, Window};
 use nalgebra_glm::Vec2;
 use std::f32::consts::PI;
-use crate::maze::Maze;
 
 pub struct Player {
     pub pos: Vec2,
@@ -10,8 +10,8 @@ pub struct Player {
 }
 
 pub fn process_events(window: &Window, player: &mut Player, maze: &Maze, block_size: usize) {
-    const MOVE_SPEED: f32 = 10.0;
-    const ROTATION_SPEED: f32 = PI / 40.0;
+    const MOVE_SPEED: f32 = 4.0;
+    const ROTATION_SPEED: f32 = PI / 50.0;
 
     if window.is_key_down(Key::A) {
         player.a -= ROTATION_SPEED;
@@ -42,7 +42,7 @@ pub fn process_events(window: &Window, player: &mut Player, maze: &Maze, block_s
         let check_x = player.pos.x + dx + if dx > 0.0 { margin } else { -margin };
         let i_x = check_x as usize / block_size;
         let j_x = player.pos.y as usize / block_size;
-        
+
         if let Some(&cell) = maze.get(j_x).and_then(|row| row.get(i_x)) {
             if cell == ' ' || cell == 'g' || cell == 'G' {
                 player.pos.x += dx;
@@ -53,7 +53,7 @@ pub fn process_events(window: &Window, player: &mut Player, maze: &Maze, block_s
         let check_y = player.pos.y + dy + if dy > 0.0 { margin } else { -margin };
         let i_y = player.pos.x as usize / block_size;
         let j_y = check_y as usize / block_size;
-        
+
         if let Some(&cell) = maze.get(j_y).and_then(|row| row.get(i_y)) {
             if cell == ' ' || cell == 'g' || cell == 'G' {
                 player.pos.y += dy;
