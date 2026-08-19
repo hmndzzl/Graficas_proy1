@@ -3,6 +3,7 @@ mod framebuffer;
 mod maze;
 mod player;
 mod texture;
+mod enemy;
 
 use minifb::{Key, Window, WindowOptions};
 use std::f32::consts::PI;
@@ -116,11 +117,20 @@ fn get_texture_bounds(cell: char) -> (u32, u32, u32, u32) {
     }
 }
 
-fn render3d(framebuffer: &mut Framebuffer, maze: &Maze, player: &Player, texture: &Texture) {
+fn render3d(
+    framebuffer: &mut Framebuffer,
+    maze: &Maze,
+    player: &Player,
+    texture: &Texture,
+    enemies: &[crate::enemy::Enemy],
+    enemy_texture: &Texture,
+) {
     let num_rays = framebuffer.width;
     let hw = framebuffer.width as f32 / 2.0;
     let hh = framebuffer.height as f32 / 2.0;
     let d_to_plane = hw / (FOV / 2.0).tan();
+
+    let mut z_buffer = vec![0.0; framebuffer.width];
 
     for i in 0..num_rays {
         let ray_fraction = i as f32 / (num_rays - 1).max(1) as f32; // de 0.0 a 1.0
@@ -135,6 +145,8 @@ fn render3d(framebuffer: &mut Framebuffer, maze: &Maze, player: &Player, texture
         if d < 1.0 {
             d = 1.0;
         }
+
+        z_buffer[i] = d;
 
         // Cálculo de altura de la estaca (proyección)
         let wall_height = (BLOCK_SIZE as f32 / d) * d_to_plane;
@@ -190,6 +202,80 @@ fn render3d(framebuffer: &mut Framebuffer, maze: &Maze, player: &Player, texture
         }
     }
 
+    // Renderizar enemigos (Billboarding)
+    let mut sorted_enemies: Vec<&crate::enemy::Enemy> = enemies.iter().collect();
+    // Ordenar por distancia, el más lejano primero
+    sorted_enemies.sort_by(|a, b| {
+        let dist_a = (a.pos.x - player.pos.x).powi(2) + (a.pos.y - player.pos.y).powi(2);
+        let dist_b = (b.pos.x - player.pos.x).powi(2) + (b.pos.y - player.pos.y).powi(2);
+        dist_b.partial_cmp(&dist_a).unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    for enemy in sorted_enemies {
+        let dx = enemy.pos.x - player.pos.x;
+        let dy = enemy.pos.y - player.pos.y;
+        let distance = (dx * dx + dy * dy).sqrt();
+
+        // Ángulo del enemigo con respecto al jugador
+        let enemy_angle = dy.atan2(dx);
+        
+        // Diferencia de ángulo entre el jugador y el enemigo
+        let mut angle_diff = enemy_angle - player.a;
+        
+        // Normalizar el ángulo de diferencia entre -PI y PI
+        while angle_diff < -PI { angle_diff += 2.0 * PI; }
+        while angle_diff > PI { angle_diff -= 2.0 * PI; }
+
+        // Si el enemigo está detrás de la cámara, ignorarlo
+        if angle_diff.abs() > FOV {
+            continue;
+        }
+
+        let corrected_dist = distance * angle_diff.cos();
+        if corrected_dist < 1.0 { continue; } // Evitar divisiones por cero o muy pequeñas
+
+        // Tamaño del sprite en pantalla
+        let sprite_height = (BLOCK_SIZE as f32 / corrected_dist) * d_to_plane;
+        let sprite_width = sprite_height; // Asumimos un sprite cuadrado
+
+        let screen_x = hw + (angle_diff / (FOV / 2.0)) * hw;
+
+        let sprite_top = (hh - sprite_height / 2.0) as isize;
+        let sprite_bottom = (hh + sprite_height / 2.0) as isize;
+
+        let sprite_left = (screen_x - sprite_width / 2.0) as isize;
+        let sprite_right = (screen_x + sprite_width / 2.0) as isize;
+
+        let tex_w = enemy_texture.width as f32;
+        let tex_h = enemy_texture.height as f32;
+
+        for x in sprite_left..sprite_right {
+            if x >= 0 && x < framebuffer.width as isize {
+                let ux = x as usize;
+                
+                // Z-buffer check
+                if corrected_dist < z_buffer[ux] {
+                    let tx = ((x - sprite_left) as f32 / sprite_width * tex_w) as u32;
+
+                    let y_top = sprite_top.max(0) as usize;
+                    let y_bottom = sprite_bottom.min(framebuffer.height as isize) as usize;
+
+                    for y in y_top..y_bottom {
+                        let ty = ((y as isize - sprite_top) as f32 / sprite_height * tex_h) as u32;
+                        let color = enemy_texture.get_pixel_color(tx, ty);
+                        
+                        // Ignorar píxeles transparentes (asumiendo que alpha > 0 es opaco)
+                        let alpha = (color >> 24) & 0xFF;
+                        if alpha > 0 {
+                            framebuffer.set_current_color(color);
+                            framebuffer.point(ux, y);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Dibujar minimapa
     let minimap_block_size = BLOCK_SIZE / 5;
     let minimap_width = maze.first().map_or(0, |row| row.len()) * minimap_block_size;
@@ -230,6 +316,117 @@ fn draw_success_screen(framebuffer: &mut Framebuffer) {
     }
 }
 
+fn draw_text(framebuffer: &mut Framebuffer, x: usize, y: usize, text: &str, size: usize, color: u32) {
+    let font = [
+        [1,1,1, 1,0,1, 1,0,1, 1,0,1, 1,1,1], // 0
+        [0,1,0, 1,1,0, 0,1,0, 0,1,0, 1,1,1], // 1
+        [1,1,1, 0,0,1, 1,1,1, 1,0,0, 1,1,1], // 2
+        [1,1,1, 0,0,1, 1,1,1, 0,0,1, 1,1,1], // 3
+        [1,0,1, 1,0,1, 1,1,1, 0,0,1, 0,0,1], // 4
+        [1,1,1, 1,0,0, 1,1,1, 0,0,1, 1,1,1], // 5
+        [1,1,1, 1,0,0, 1,1,1, 1,0,1, 1,1,1], // 6
+        [1,1,1, 0,0,1, 0,1,0, 0,1,0, 0,1,0], // 7
+        [1,1,1, 1,0,1, 1,1,1, 1,0,1, 1,1,1], // 8
+        [1,1,1, 1,0,1, 1,1,1, 0,0,1, 1,1,1], // 9
+    ];
+    let slash = [0,0,1, 0,0,1, 0,1,0, 1,0,0, 1,0,0];
+
+    framebuffer.set_current_color(color);
+    
+    let mut cursor_x = x;
+    for ch in text.chars() {
+        let bitmap = match ch {
+            '0'..='9' => &font[(ch as usize) - ('0' as usize)],
+            '/' => &slash,
+            _ => continue,
+        };
+        
+        for (i, &pixel) in bitmap.iter().enumerate() {
+            if pixel == 1 {
+                let px = cursor_x + (i % 3) * size;
+                let py = y + (i / 3) * size;
+                for dx in 0..size {
+                    for dy in 0..size {
+                        framebuffer.point(px + dx, py + dy);
+                    }
+                }
+            }
+        }
+        cursor_x += 4 * size;
+    }
+}
+
+fn draw_health_bar(framebuffer: &mut Framebuffer, hp: f32) {
+    let bar_width = 300;
+    let bar_height = 20;
+    let x = (framebuffer.width - bar_width) / 2;
+    let y = framebuffer.height - 40;
+
+    let clamped_hp = hp.clamp(0.0, 100.0);
+    let ratio = clamped_hp / 100.0;
+    let current_width = (bar_width as f32 * ratio) as usize;
+
+    let r = ((1.0 - ratio) * 255.0) as u32;
+    let g = (ratio * 255.0) as u32;
+    let b = 0;
+    let color = (r << 16) | (g << 8) | b;
+
+    // Draw background (empty bar)
+    framebuffer.set_current_color(0x333333);
+    for dx in 0..bar_width {
+        for dy in 0..bar_height {
+            framebuffer.point(x + dx, y + dy);
+        }
+    }
+
+    // Draw health
+    framebuffer.set_current_color(color);
+    for dx in 0..current_width {
+        for dy in 0..bar_height {
+            framebuffer.point(x + dx, y + dy);
+        }
+    }
+
+    // Draw text
+    let text = format!("{:.0}/100", clamped_hp);
+    let text_len = text.len();
+    let text_width = text_len * 4 * 2; // size=2
+    draw_text(framebuffer, x + bar_width / 2 - text_width / 2, y + 4, &text, 2, 0xFFFFFF);
+}
+
+fn draw_game_over_screen(framebuffer: &mut Framebuffer) {
+    framebuffer.set_background_color(0x000000); // Negro
+    framebuffer.clear();
+
+    let text = [
+        " GGG   AAA  M   M EEEE    OOO  V   V EEEE RRRR  ",
+        "G     A   A MM MM E      O   O V   V E    R   R ",
+        "G  GG AAAAA M M M EEEE   O   O V   V EEEE RRRR  ",
+        "G   G A   A M   M E      O   O  V V  E    R  R  ",
+        " GGG  A   A M   M EEEE    OOO    V   EEEE R   R ",
+    ];
+
+    let pixel_size = 12;
+    let start_x = framebuffer.width / 2 - (text[0].len() * pixel_size) / 2;
+    let start_y = framebuffer.height / 2 - (text.len() * pixel_size) / 2;
+
+    framebuffer.set_current_color(0xFF0000); // Rojo
+
+    for (row, line) in text.iter().enumerate() {
+        for (col, ch) in line.chars().enumerate() {
+            if ch != ' ' {
+                let x = start_x + col * pixel_size;
+                let y = start_y + row * pixel_size;
+                for dy in 0..pixel_size {
+                    for dx in 0..pixel_size {
+                        framebuffer.point(x + dx, y + dy);
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn main() {
     let window_width = 1300;
     let window_height = 900;
@@ -238,9 +435,34 @@ fn main() {
 
     let (maze, mut player) = load_maze("./maze.txt", BLOCK_SIZE);
 
-    // Cargar sprite sheet
+    // Cargar texturas
     let texture =
         Texture::new("./assets/textures.png").expect("No se pudo cargar ./assets/textures.png");
+    let enemy_texture =
+        Texture::new("./assets/sat.png").expect("No se pudo cargar ./assets/sat.png");
+
+    // Encontrar posiciones aleatorias vacías para los enemigos
+    let mut empty_spaces = Vec::new();
+    for (j, row) in maze.iter().enumerate() {
+        for (i, &cell) in row.iter().enumerate() {
+            // Evitar spawns muy cerca del jugador o en la meta
+            if cell == ' ' && (i > 2 || j > 2) {
+                empty_spaces.push((i, j));
+            }
+        }
+    }
+    
+    // Generar max 3 enemigos
+    let mut enemies = Vec::new();
+    let num_enemies = empty_spaces.len().min(3);
+    for idx in 0..num_enemies {
+        // Simple dispersión
+        let step = (empty_spaces.len() / num_enemies).max(1);
+        let (i, j) = empty_spaces[(idx * step) % empty_spaces.len()];
+        let ex = (i * BLOCK_SIZE + BLOCK_SIZE / 2) as f32;
+        let ey = (j * BLOCK_SIZE + BLOCK_SIZE / 2) as f32;
+        enemies.push(crate::enemy::Enemy::new(ex, ey));
+    }
 
     let mut framebuffer = Framebuffer::new(framebuffer_width, framebuffer_height);
     framebuffer.set_background_color(0x333355);
@@ -256,19 +478,33 @@ fn main() {
     let mut is_3d_mode = true;
     let mut last_m_pressed = false;
     let mut win_state = false;
+    let mut game_over_state = false;
 
+    let mut last_time = Instant::now();
     let target_frame_time = Duration::from_millis(1000 / 60); // ~16.6 ms per frame for 60 FPS
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let frame_start = Instant::now();
+        let dt = frame_start.duration_since(last_time).as_secs_f32();
+        last_time = frame_start;
 
-        if !win_state {
+        if !win_state && !game_over_state {
             let m_pressed = window.is_key_down(Key::M);
             if m_pressed && !last_m_pressed {
                 is_3d_mode = !is_3d_mode;
             }
             last_m_pressed = m_pressed;
             process_events(&window, &mut player, &maze, BLOCK_SIZE);
+
+            // Actualizar enemigos
+            for enemy in enemies.iter_mut() {
+                enemy.update(&mut player, dt, &maze, BLOCK_SIZE);
+            }
+
+            if player.hp <= 0.0 {
+                println!("¡Has muerto! Game Over.");
+                game_over_state = true;
+            }
 
             // ¿el jugador llegó a la meta? Se traduce su posición en píxeles a la
             // celda que ocupa y se revisa si esa celda es la marca `g`.
@@ -284,12 +520,15 @@ fn main() {
 
         if win_state {
             draw_success_screen(&mut framebuffer);
+        } else if game_over_state {
+            draw_game_over_screen(&mut framebuffer);
         } else {
             if is_3d_mode {
-                render3d(&mut framebuffer, &maze, &player, &texture);
+                render3d(&mut framebuffer, &maze, &player, &texture, &enemies, &enemy_texture);
             } else {
                 render2d(&mut framebuffer, &maze, &player);
             }
+            draw_health_bar(&mut framebuffer, player.hp);
         }
 
         window
@@ -302,9 +541,9 @@ fn main() {
             std::thread::sleep(target_frame_time - elapsed);
         }
 
-        // Mostrar FPS en el título
+        // Mostrar FPS y HP en el título
         let final_elapsed = frame_start.elapsed();
         let fps = 1.0 / final_elapsed.as_secs_f32();
-        window.set_title(&format!("Maze Runner - {:.0} FPS", fps));
+        window.set_title(&format!("Maze Runner - {:.0} FPS - HP: {:.0}", fps, player.hp.max(0.0)));
     }
 }

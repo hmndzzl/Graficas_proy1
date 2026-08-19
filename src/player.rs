@@ -6,6 +6,7 @@ use crate::maze::Maze;
 pub struct Player {
     pub pos: Vec2,
     pub a: f32,
+    pub hp: f32,
 }
 
 pub fn process_events(window: &Window, player: &mut Player, maze: &Maze, block_size: usize) {
