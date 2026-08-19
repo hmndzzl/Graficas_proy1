@@ -1,6 +1,6 @@
-use nalgebra_glm::Vec2;
 use crate::maze::Maze;
 use crate::player::Player;
+use nalgebra_glm::Vec2;
 
 pub struct Enemy {
     pub pos: Vec2,
@@ -14,7 +14,7 @@ impl Enemy {
     }
 
     pub fn update(&mut self, player: &mut Player, dt: f32, maze: &Maze, block_size: usize) {
-        let speed = 40.0; // Píxeles por segundo
+        let speed = 90.0; // Píxeles por segundo
         let dx = player.pos.x - self.pos.x;
         let dy = player.pos.y - self.pos.y;
         let dist = (dx * dx + dy * dy).sqrt();
@@ -50,7 +50,7 @@ impl Enemy {
 
         // Daño si están cerca
         if dist < (block_size as f32) * 0.5 {
-            let dps = 20.0; // Daño por segundo
+            let dps = 80.0; // Daño por segundo
             player.hp -= dps * dt;
             if player.hp < 0.0 {
                 player.hp = 0.0;

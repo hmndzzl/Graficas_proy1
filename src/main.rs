@@ -427,6 +427,67 @@ fn draw_game_over_screen(framebuffer: &mut Framebuffer) {
     }
 }
 
+fn draw_main_menu(framebuffer: &mut Framebuffer) {
+    framebuffer.set_background_color(0x000000);
+    framebuffer.clear();
+
+    let title = [
+        "M   M  AAA  ZZZZZ EEEE     RRRR  U   U N   N N   N EEEE RRRR  ",
+        "MM MM A   A    Z  E        R   R U   U NN  N NN  N E    R   R ",
+        "M M M AAAAA   Z   EEEE     RRRR  U   U N N N N N N EEEE RRRR  ",
+        "M   M A   A  Z    E        R  R  U   U N  NN N  NN E    R  R  ",
+        "M   M A   A ZZZZZ EEEE     R   R  UUU  N   N N   N EEEE R   R ",
+    ];
+
+    let pixel_size = 12;
+    let title_x = framebuffer.width / 2 - (title[0].len() * pixel_size) / 2;
+    let title_y = framebuffer.height / 3 - (title.len() * pixel_size) / 2;
+
+    framebuffer.set_current_color(0x00FFFF); // Cyan
+
+    for (row, line) in title.iter().enumerate() {
+        for (col, ch) in line.chars().enumerate() {
+            if ch != ' ' {
+                let x = title_x + col * pixel_size;
+                let y = title_y + row * pixel_size;
+                for dy in 0..pixel_size {
+                    for dx in 0..pixel_size {
+                        framebuffer.point(x + dx, y + dy);
+                    }
+                }
+            }
+        }
+    }
+
+    let prompt = [
+        "PPPP  RRRR  EEEEE SSSSS SSSSS    EEEE N   N TTTTT EEEEE RRRR  ",
+        "P   P R   R E     S     S        E    NN  N   T   E     R   R ",
+        "PPPP  RRRR  EEEEE SSSSS SSSSS    EEEE N N N   T   EEEEE RRRR  ",
+        "P     R  R  E         S     S    E    N  NN   T   E     R  R  ",
+        "P     R   R EEEEE SSSSS SSSSS    EEEE N   N   T   EEEEE R   R ",
+    ];
+
+    let prompt_pixel_size = 6;
+    let prompt_x = framebuffer.width / 2 - (prompt[0].len() * prompt_pixel_size) / 2;
+    let prompt_y = framebuffer.height * 2 / 3 - (prompt.len() * prompt_pixel_size) / 2;
+
+    framebuffer.set_current_color(0xFFFFFF); // White
+
+    for (row, line) in prompt.iter().enumerate() {
+        for (col, ch) in line.chars().enumerate() {
+            if ch != ' ' {
+                let x = prompt_x + col * prompt_pixel_size;
+                let y = prompt_y + row * prompt_pixel_size;
+                for dy in 0..prompt_pixel_size {
+                    for dx in 0..prompt_pixel_size {
+                        framebuffer.point(x + dx, y + dy);
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn main() {
     let window_width = 1300;
     let window_height = 900;
@@ -479,6 +540,7 @@ fn main() {
     let mut last_m_pressed = false;
     let mut win_state = false;
     let mut game_over_state = false;
+    let mut menu_state = true;
 
     let mut last_time = Instant::now();
     let target_frame_time = Duration::from_millis(1000 / 60); // ~16.6 ms per frame for 60 FPS
@@ -488,7 +550,12 @@ fn main() {
         let dt = frame_start.duration_since(last_time).as_secs_f32();
         last_time = frame_start;
 
-        if !win_state && !game_over_state {
+        if menu_state {
+            if window.is_key_down(Key::Enter) {
+                menu_state = false;
+                last_time = Instant::now(); // Reset dt so enemies don't jump
+            }
+        } else if !win_state && !game_over_state {
             let m_pressed = window.is_key_down(Key::M);
             if m_pressed && !last_m_pressed {
                 is_3d_mode = !is_3d_mode;
@@ -518,7 +585,9 @@ fn main() {
 
         framebuffer.clear();
 
-        if win_state {
+        if menu_state {
+            draw_main_menu(&mut framebuffer);
+        } else if win_state {
             draw_success_screen(&mut framebuffer);
         } else if game_over_state {
             draw_game_over_screen(&mut framebuffer);
