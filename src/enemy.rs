@@ -86,7 +86,7 @@ impl Enemy {
 
         // Daño si están cerca
         if dist < (block_size as f32) * 0.5 {
-            let dps = 80.0; // Daño por segundo
+            let dps = 50.0; // Daño por segundo
             player.hp -= dps * dt;
             if player.hp < 0.0 {
                 player.hp = 0.0;
