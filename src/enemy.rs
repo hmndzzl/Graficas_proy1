@@ -55,7 +55,7 @@ impl Enemy {
             }
         }
 
-        if dist > 0.0 {
+        if dist > 50.0 {
             // Mover hacia el jugador
             let move_x = (dx / dist) * speed * dt;
             let move_y = (dy / dist) * speed * dt;

@@ -656,7 +656,7 @@ fn main() {
                 is_3d_mode = !is_3d_mode;
             }
             last_m_pressed = m_pressed;
-            process_events(&window, &mut player, &maze, BLOCK_SIZE);
+            process_events(&window, &mut player, &maze, &enemies, BLOCK_SIZE);
 
             // Actualizar enemigos
             for enemy in enemies.iter_mut() {
