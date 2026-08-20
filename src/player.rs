@@ -17,7 +17,7 @@ pub fn process_events(
     block_size: usize,
 ) {
     const MOVE_SPEED: f32 = 3.0;
-    const ROTATION_SPEED: f32 = PI / 55.0;
+    const ROTATION_SPEED: f32 = PI / 45.0;
 
     if window.is_key_down(Key::A) || window.is_key_down(Key::Left) {
         player.a -= ROTATION_SPEED;

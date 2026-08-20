@@ -592,6 +592,42 @@ fn load_level(
     (maze, player, enemies)
 }
 
+fn draw_paused_screen(framebuffer: &mut Framebuffer) {
+    // Dim the screen
+    for pixel in framebuffer.buffer.iter_mut() {
+        let r = ((*pixel >> 16) & 0xFF) / 2;
+        let g = ((*pixel >> 8) & 0xFF) / 2;
+        let b = (*pixel & 0xFF) / 2;
+        *pixel = (r << 16) | (g << 8) | b;
+    }
+
+    let text = [
+        "PPPP   AAA  U   U SSSS EEEE DDD ",
+        "P   P A   A U   U S    E    D  D",
+        "PPPP  AAAAA U   U SSSS EEEE D  D",
+        "P     A   A U   U    S E    D  D",
+        "P     A   A  UUU  SSSS EEEE DDD ",
+    ];
+    let pixel_size = 12;
+    let text_x = framebuffer.width / 2 - (text[0].len() * pixel_size) / 2;
+    let text_y = framebuffer.height / 2 - (text.len() * pixel_size) / 2;
+
+    framebuffer.set_current_color(0xFFFFFF); // Blanco
+    for (row, line) in text.iter().enumerate() {
+        for (col, ch) in line.chars().enumerate() {
+            if ch != ' ' {
+                let x = text_x + col * pixel_size;
+                let y = text_y + row * pixel_size;
+                for dy in 0..pixel_size {
+                    for dx in 0..pixel_size {
+                        framebuffer.point(x + dx, y + dy);
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn main() {
     let window_width = 1300;
     let window_height = 900;
@@ -636,6 +672,8 @@ fn main() {
     let mut win_state = false;
     let mut game_over_state = false;
     let mut menu_state = true;
+    let mut is_paused = false;
+    let mut last_p_pressed = false;
 
     let mut last_time = Instant::now();
     let target_frame_time = Duration::from_millis(1000 / 60); // ~16.6 ms per frame for 60 FPS
@@ -651,47 +689,58 @@ fn main() {
                 last_time = Instant::now(); // Reset dt so enemies don't jump
             }
         } else if !win_state && !game_over_state {
-            let m_pressed = window.is_key_down(Key::M);
-            if m_pressed && !last_m_pressed {
-                is_3d_mode = !is_3d_mode;
-            }
-            last_m_pressed = m_pressed;
-            process_events(&window, &mut player, &maze, &enemies, BLOCK_SIZE);
-
-            // Actualizar enemigos
-            for enemy in enemies.iter_mut() {
-                enemy.update(&mut player, dt, &maze, BLOCK_SIZE);
-            }
-
-            if player.hp <= 0.0 {
-                println!("¡Has muerto! Game Over.");
-                game_over_state = true;
-            }
-
-            // ¿el jugador llegó a la meta? Se traduce su posición en píxeles a la
-            // celda que ocupa y se revisa si esa celda es la marca `g`.
-            let i = player.pos.x as usize / BLOCK_SIZE;
-            let j = player.pos.y as usize / BLOCK_SIZE;
-            if maze.get(j).and_then(|row| row.get(i)) == Some(&'g') {
-                if current_level < 3 {
-                    println!(
-                        "¡Nivel {} completado! Cargando nivel {}...",
-                        current_level,
-                        current_level + 1
-                    );
-                    current_level += 1;
-                    let current_hp = player.hp;
-                    let (new_maze, mut new_player, new_enemies) =
-                        load_level(current_level, stream_handle.as_ref(), audio_data.clone());
-                    maze = new_maze;
-                    new_player.hp = current_hp;
-                    player = new_player;
-                    enemies = new_enemies;
-
+            let p_pressed = window.is_key_down(Key::P);
+            if p_pressed && !last_p_pressed {
+                is_paused = !is_paused;
+                if !is_paused {
                     last_time = Instant::now();
-                } else {
-                    println!("¡Meta alcanzada! Has ganado.");
-                    win_state = true;
+                }
+            }
+            last_p_pressed = p_pressed;
+
+            if !is_paused {
+                let m_pressed = window.is_key_down(Key::M);
+                if m_pressed && !last_m_pressed {
+                    is_3d_mode = !is_3d_mode;
+                }
+                last_m_pressed = m_pressed;
+                process_events(&window, &mut player, &maze, &enemies, BLOCK_SIZE);
+
+                // Actualizar enemigos
+                for enemy in enemies.iter_mut() {
+                    enemy.update(&mut player, dt, &maze, BLOCK_SIZE);
+                }
+
+                if player.hp <= 0.0 {
+                    println!("¡Has muerto! Game Over.");
+                    game_over_state = true;
+                }
+
+                // ¿el jugador llegó a la meta? Se traduce su posición en píxeles a la
+                // celda que ocupa y se revisa si esa celda es la marca `g`.
+                let i = player.pos.x as usize / BLOCK_SIZE;
+                let j = player.pos.y as usize / BLOCK_SIZE;
+                if maze.get(j).and_then(|row| row.get(i)) == Some(&'g') {
+                    if current_level < 3 {
+                        println!(
+                            "¡Nivel {} completado! Cargando nivel {}...",
+                            current_level,
+                            current_level + 1
+                        );
+                        current_level += 1;
+                        let current_hp = player.hp;
+                        let (new_maze, mut new_player, new_enemies) =
+                            load_level(current_level, stream_handle.as_ref(), audio_data.clone());
+                        maze = new_maze;
+                        new_player.hp = current_hp;
+                        player = new_player;
+                        enemies = new_enemies;
+
+                        last_time = Instant::now();
+                    } else {
+                        println!("¡Meta alcanzada! Has ganado.");
+                        win_state = true;
+                    }
                 }
             }
         } else if game_over_state {
@@ -729,6 +778,10 @@ fn main() {
                 render2d(&mut framebuffer, &maze, &player);
             }
             draw_health_bar(&mut framebuffer, player.hp);
+
+            if is_paused {
+                draw_paused_screen(&mut framebuffer);
+            }
         }
 
         window
