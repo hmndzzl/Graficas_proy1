@@ -55,6 +55,7 @@ fn render_map(
     framebuffer: &mut Framebuffer,
     maze: &Maze,
     player: &Player,
+    enemies: &[crate::enemy::Enemy],
     block_size: usize,
     offset_x: usize,
     offset_y: usize,
@@ -99,10 +100,53 @@ fn render_map(
             scale,
         );
     }
+
+    // Dibujar enemigos en rojo
+    framebuffer.set_current_color(0xFF0000);
+    for enemy in enemies {
+        let dx = enemy.pos.x - player.pos.x;
+        let dy = enemy.pos.y - player.pos.y;
+        let dist = dx.hypot(dy);
+        
+        let angle_to_enemy = dy.atan2(dx);
+        let mut angle_diff = (angle_to_enemy - player.a).rem_euclid(2.0 * PI);
+        if angle_diff > PI {
+            angle_diff -= 2.0 * PI;
+        }
+
+        // Si está dentro del FOV (con un pequeño margen)
+        if angle_diff.abs() < FOV / 1.5 {
+            let (hit_dist, _, _, _) = crate::caster::cast_ray_3d(maze, player, angle_to_enemy, BLOCK_SIZE);
+            
+            // Si la distancia a la pared es mayor que la distancia al enemigo, el enemigo es visible
+            if hit_dist >= dist {
+                let ex = offset_x + (enemy.pos.x * scale) as usize;
+                let ey = offset_y + (enemy.pos.y * scale) as usize;
+                for x in ex.saturating_sub(p_radius)..=ex + p_radius {
+                    for y in ey.saturating_sub(p_radius)..=ey + p_radius {
+                        framebuffer.point(x, y);
+                    }
+                }
+            }
+        }
+    }
 }
 
-fn render2d(framebuffer: &mut Framebuffer, maze: &Maze, player: &Player) {
-    render_map(framebuffer, maze, player, BLOCK_SIZE, 0, 0);
+fn render2d(framebuffer: &mut Framebuffer, maze: &Maze, player: &Player, enemies: &[crate::enemy::Enemy]) {
+    let maze_width = maze.first().map_or(0, |row| row.len());
+    let maze_height = maze.len();
+    
+    let block_w = framebuffer.width / maze_width.max(1);
+    let block_h = framebuffer.height / maze_height.max(1);
+    
+    let block_size = block_w.min(block_h);
+    
+    let map_w = maze_width * block_size;
+    let map_h = maze_height * block_size;
+    let offset_x = (framebuffer.width - map_w) / 2;
+    let offset_y = (framebuffer.height - map_h) / 2;
+
+    render_map(framebuffer, maze, player, enemies, block_size, offset_x, offset_y);
 }
 
 fn get_texture_bounds(cell: char) -> (u32, u32, u32, u32) {
@@ -290,7 +334,7 @@ fn render3d(
     let minimap_block_size = BLOCK_SIZE / 5;
     let minimap_width = maze.first().map_or(0, |row| row.len()) * minimap_block_size;
     let offset_x = framebuffer.width.saturating_sub(minimap_width);
-    render_map(framebuffer, maze, player, minimap_block_size, offset_x, 0);
+    render_map(framebuffer, maze, player, enemies, minimap_block_size, offset_x, 0);
 }
 
 
@@ -516,7 +560,7 @@ fn main() {
                     &enemy_texture,
                 );
             } else {
-                render2d(&mut framebuffer, &maze, &player);
+                render2d(&mut framebuffer, &maze, &player, &enemies);
             }
             ui::draw_health_bar(&mut framebuffer, player.hp);
 
