@@ -681,6 +681,7 @@ fn main() {
                             sink.stop();
                         }
                         bgm_sink = play_bgm(stream_handle.as_ref(), &ll_audio_data);
+                        enemies.clear();
                     }
                 }
             }
@@ -698,6 +699,24 @@ fn main() {
                 bgm_sink = play_bgm(stream_handle.as_ref(), &ootw_audio_data);
             } else if window.is_key_down(Key::M) {
                 game_over_state = false;
+                menu_state = true;
+                last_time = Instant::now();
+                last_mouse_x = None;
+            }
+        } else if win_state {
+            if window.is_key_down(Key::R) {
+                current_level = 1;
+                let (new_maze, new_player, new_enemies) =
+                    load_level(current_level, stream_handle.as_ref(), audio_data.clone());
+                maze = new_maze;
+                player = new_player;
+                enemies = new_enemies;
+                win_state = false;
+                last_time = Instant::now();
+                last_mouse_x = None;
+                bgm_sink = play_bgm(stream_handle.as_ref(), &ootw_audio_data);
+            } else if window.is_key_down(Key::M) {
+                win_state = false;
                 menu_state = true;
                 last_time = Instant::now();
                 last_mouse_x = None;

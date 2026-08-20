@@ -198,7 +198,7 @@ pub fn draw_main_menu(framebuffer: &mut Framebuffer) {
 
     draw_text_pixel_art(framebuffer, &title, 17, fb_height / 3, 0x00FFFF);
 
-    let items = ["START ENTER", "CONTROLS C", "EXIT ESC"];
+    let items = ["START ENTER", "CONTROLES C", "EXIT ESC"];
 
     let text_size = 6;
     for (i, item) in items.iter().enumerate() {
@@ -215,11 +215,11 @@ pub fn draw_controls_screen(framebuffer: &mut Framebuffer) {
     framebuffer.clear();
 
     let title = [
-        "CCCC OOOO N   N TTTTT RRRR  OOOO L    SSSS",
-        "C    O  O NN  N   T   R   R O  O L    S   ",
-        "C    O  O N N N   T   RRRR  O  O L     SSS",
-        "C    O  O N  NN   T   R  R  O  O L        S",
-        "CCCC OOOO N   N   T   R   R OOOO LLLL SSSS",
+        "CCCC OOOO N   N TTTTT RRRR  OOOO L    EEEE SSSS",
+        "C    O  O NN  N   T   R   R O  O L    E    S   ",
+        "C    O  O N N N   T   RRRR  O  O L    EEEE SSSS",
+        "C    O  O N  NN   T   R  R  O  O L    E       S",
+        "CCCC OOOO N   N   T   R   R OOOO LLLL EEEE SSSS",
     ];
 
     let fb_height = framebuffer.height;
@@ -275,16 +275,37 @@ pub fn draw_success_screen(framebuffer: &mut Framebuffer) {
     framebuffer.set_background_color(0x000000);
     framebuffer.clear();
 
-    let win_text = [
-        " !  N   N III V   V EEEE L      CCC  OOO  M   M PPPP  L    EEEE TTTTT  AAA  DDDD   OOO   ! ",
-        "    NN  N  I  V   V E    L     C    O   O MM MM P   P L    E      T   A   A D   D O   O  ! ",
-        " !  N N N  I  V   V EEEE L     C    O   O M M M PPPP  L    EEEE   T   AAAAA D   D O   O  ! ",
-        " !  N  NN  I   V V  E    L     C    O   O M   M P     L    E      T   A   A D   D O   O    ",
-        " !  N   N III   V   EEEE LLLL   CCC  OOO  M   M P     LLLL EEEE   T   A   A DDDD   OOO   ! ",
+    let win_text_1 = [
+        "H   H  AAA  SSSS    EEEE V   V  AAA  DDDD  III DDDD   OOO  ",
+        "H   H A   A S       E    V   V A   A D   D  I  D   D O   O ",
+        "HHHHH AAAAA SSSS    EEEE V   V AAAAA D   D  I  D   D O   O ",
+        "H   H A   A    S    E     V V  A   A D   D  I  D   D O   O ",
+        "H   H A   A SSSS    EEEE   V   A   A DDDD  III DDDD   OOO  ",
+    ];
+
+    let win_text_2 = [
+        "  AAA     L      AAA     SSSS  AAA  TTTTT   ! ",
+        " A   A    L     A   A    S    A   A   T     ! ",
+        " AAAAA    L     AAAAA    SSSS AAAAA   T     ! ",
+        " A   A    L     A   A       S A   A   T       ",
+        " A   A    LLLL  A   A    SSSS A   A   T     ! ",
     ];
 
     let fb_height = framebuffer.height;
-    draw_text_pixel_art(framebuffer, &win_text, 12, fb_height / 2 - 30, 0xFFD700);
+    let fb_width = framebuffer.width;
+
+    draw_text_pixel_art(framebuffer, &win_text_1, 12, fb_height / 2 - 80, 0xFFD700);
+    draw_text_pixel_art(framebuffer, &win_text_2, 12, fb_height / 2 + 20, 0xFFD700);
+
+    let items = ["RESTART = R", "MENU = M"];
+
+    let text_size = 6;
+    for (i, item) in items.iter().enumerate() {
+        let text_width = item.len() * 4 * text_size;
+        let x = fb_width / 2 - text_width / 2;
+        let y = fb_height / 2 + i * (10 * text_size) + 120;
+        draw_text_simple(framebuffer, item, x, y, text_size, 0xFFFFFF);
+    }
 }
 
 pub fn draw_paused_screen(framebuffer: &mut Framebuffer) {
