@@ -444,6 +444,10 @@ fn main() {
         .ok()
         .map(std::sync::Arc::new);
 
+    let idsb_audio_data = std::fs::read("./assets/idsb_ts.mp3")
+        .ok()
+        .map(std::sync::Arc::new);
+
     let play_bgm = |stream: Option<&rodio::OutputStreamHandle>,
                     data: &Option<std::sync::Arc<Vec<u8>>>|
      -> Option<rodio::Sink> {
@@ -591,6 +595,8 @@ fn main() {
                         }
                         if current_level == 2 {
                             bgm_sink = play_bgm(stream_handle.as_ref(), &rfi_audio_data);
+                        } else if current_level == 3 {
+                            bgm_sink = play_bgm(stream_handle.as_ref(), &idsb_audio_data);
                         }
                         let current_hp = player.hp;
                         let (new_maze, mut new_player, new_enemies) =
