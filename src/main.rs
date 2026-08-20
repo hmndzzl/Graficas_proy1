@@ -431,6 +431,10 @@ fn main() {
         .ok()
         .map(std::sync::Arc::new);
 
+    let vent_audio_data = std::fs::read("./assets/vent.mp3")
+        .ok()
+        .map(std::sync::Arc::new);
+
     let mut current_level = 1;
     let (mut maze, mut player, mut enemies) =
         load_level(current_level, stream_handle.as_ref(), audio_data.clone());
@@ -524,6 +528,17 @@ fn main() {
                 let i = player.pos.x as usize / BLOCK_SIZE;
                 let j = player.pos.y as usize / BLOCK_SIZE;
                 if maze.get(j).and_then(|row| row.get(i)) == Some(&'g') {
+                    if let (Some(handle), Some(data)) = (stream_handle.as_ref(), &vent_audio_data) {
+                        if let Ok(sink) = rodio::Sink::try_new(handle) {
+                            let cursor = std::io::Cursor::new((**data).clone());
+                            if let Ok(source) = rodio::Decoder::new(cursor) {
+                                sink.set_volume(5.0);
+                                sink.append(source);
+                                sink.detach();
+                            }
+                        }
+                    }
+
                     if current_level < 3 {
                         println!(
                             "¡Nivel {} completado! Cargando nivel {}...",
