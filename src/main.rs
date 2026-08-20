@@ -440,6 +440,10 @@ fn main() {
         .ok()
         .map(std::sync::Arc::new);
 
+    let rfi_audio_data = std::fs::read("./assets/rfi_ts.mp3")
+        .ok()
+        .map(std::sync::Arc::new);
+
     let play_bgm = |stream: Option<&rodio::OutputStreamHandle>,
                     data: &Option<std::sync::Arc<Vec<u8>>>|
      -> Option<rodio::Sink> {
@@ -568,7 +572,7 @@ fn main() {
                         if let Ok(sink) = rodio::Sink::try_new(handle) {
                             let cursor = std::io::Cursor::new((**data).clone());
                             if let Ok(source) = rodio::Decoder::new(cursor) {
-                                sink.set_volume(5.0);
+                                sink.set_volume(6.0);
                                 sink.append(source);
                                 sink.detach();
                             }
@@ -584,6 +588,9 @@ fn main() {
                         current_level += 1;
                         if let Some(sink) = bgm_sink.take() {
                             sink.stop();
+                        }
+                        if current_level == 2 {
+                            bgm_sink = play_bgm(stream_handle.as_ref(), &rfi_audio_data);
                         }
                         let current_hp = player.hp;
                         let (new_maze, mut new_player, new_enemies) =
