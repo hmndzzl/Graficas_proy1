@@ -509,6 +509,10 @@ fn main() {
         .ok()
         .map(std::sync::Arc::new);
 
+    let ll_audio_data = std::fs::read("./assets/ll_ts.mp3")
+        .ok()
+        .map(std::sync::Arc::new);
+
     let play_bgm = |stream: Option<&rodio::OutputStreamHandle>,
                     data: &Option<std::sync::Arc<Vec<u8>>>|
      -> Option<rodio::Sink> {
@@ -673,6 +677,10 @@ fn main() {
                     } else {
                         println!("¡Meta alcanzada! Has ganado.");
                         win_state = true;
+                        if let Some(sink) = bgm_sink.take() {
+                            sink.stop();
+                        }
+                        bgm_sink = play_bgm(stream_handle.as_ref(), &ll_audio_data);
                     }
                 }
             }
