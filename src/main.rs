@@ -2,8 +2,8 @@ mod caster;
 mod enemy;
 mod framebuffer;
 mod maze;
-mod player;
 mod physics;
+mod player;
 mod texture;
 mod ui;
 
@@ -107,7 +107,7 @@ fn render_map(
         let dx = enemy.pos.x - player.pos.x;
         let dy = enemy.pos.y - player.pos.y;
         let dist = dx.hypot(dy);
-        
+
         let angle_to_enemy = dy.atan2(dx);
         let mut angle_diff = (angle_to_enemy - player.a).rem_euclid(2.0 * PI);
         if angle_diff > PI {
@@ -116,8 +116,9 @@ fn render_map(
 
         // Si está dentro del FOV (con un pequeño margen)
         if angle_diff.abs() < FOV / 1.5 {
-            let (hit_dist, _, _, _) = crate::caster::cast_ray_3d(maze, player, angle_to_enemy, BLOCK_SIZE);
-            
+            let (hit_dist, _, _, _) =
+                crate::caster::cast_ray_3d(maze, player, angle_to_enemy, BLOCK_SIZE);
+
             // Si la distancia a la pared es mayor que la distancia al enemigo, el enemigo es visible
             if hit_dist >= dist {
                 let ex = offset_x + (enemy.pos.x * scale) as usize;
@@ -132,21 +133,34 @@ fn render_map(
     }
 }
 
-fn render2d(framebuffer: &mut Framebuffer, maze: &Maze, player: &Player, enemies: &[crate::enemy::Enemy]) {
+fn render2d(
+    framebuffer: &mut Framebuffer,
+    maze: &Maze,
+    player: &Player,
+    enemies: &[crate::enemy::Enemy],
+) {
     let maze_width = maze.first().map_or(0, |row| row.len());
     let maze_height = maze.len();
-    
+
     let block_w = framebuffer.width / maze_width.max(1);
     let block_h = framebuffer.height / maze_height.max(1);
-    
+
     let block_size = block_w.min(block_h);
-    
+
     let map_w = maze_width * block_size;
     let map_h = maze_height * block_size;
     let offset_x = (framebuffer.width - map_w) / 2;
     let offset_y = (framebuffer.height - map_h) / 2;
 
-    render_map(framebuffer, maze, player, enemies, block_size, offset_x, offset_y);
+    render_map(
+        framebuffer,
+        maze,
+        player,
+        enemies,
+        block_size,
+        offset_x,
+        offset_y,
+    );
 }
 
 fn get_texture_bounds(cell: char) -> (u32, u32, u32, u32) {
@@ -179,7 +193,7 @@ fn render3d(
     let mut z_buffer = vec![0.0; framebuffer.width];
 
     for i in 0..num_rays {
-        let ray_fraction = i as f32 / (num_rays - 1).max(1) as f32; // de 0.0 a 1.0
+        let ray_fraction = i as f32 / (num_rays - 1).max(1) as f32;
         let angle = player.a - (FOV / 2.0) + FOV * ray_fraction;
 
         let (mut d, cell, hit_x, hit_y) = cast_ray_3d(maze, player, angle, BLOCK_SIZE);
@@ -334,10 +348,16 @@ fn render3d(
     let minimap_block_size = BLOCK_SIZE / 5;
     let minimap_width = maze.first().map_or(0, |row| row.len()) * minimap_block_size;
     let offset_x = framebuffer.width.saturating_sub(minimap_width);
-    render_map(framebuffer, maze, player, enemies, minimap_block_size, offset_x, 0);
+    render_map(
+        framebuffer,
+        maze,
+        player,
+        enemies,
+        minimap_block_size,
+        offset_x,
+        0,
+    );
 }
-
-
 
 fn load_level(
     level: usize,
@@ -350,40 +370,48 @@ fn load_level(
 ) {
     let (filename, max_enemies) = match level {
         1 => ("./maze.txt", 3),
-        2 => ("./maze2.txt", 8),
-        _ => ("./maze3.txt", 12),
+        2 => ("./maze2.txt", 5),
+        _ => ("./maze3.txt", 7),
     };
     let (maze, player) = load_maze(filename, BLOCK_SIZE);
+
+    let px = player.pos.x / BLOCK_SIZE as f32;
+    let py = player.pos.y / BLOCK_SIZE as f32;
 
     let mut empty_spaces = Vec::new();
     for (j, row) in maze.iter().enumerate() {
         for (i, &cell) in row.iter().enumerate() {
-            // Evitar spawns muy cerca del jugador o en la meta
-            if cell == ' ' && (i > 2 || j > 2) {
+            let dist = ((i as f32 - px).powi(2) + (j as f32 - py).powi(2)).sqrt();
+            // Evitar spawns muy cerca del jugador
+            if cell == ' ' && dist > 8.0 {
                 empty_spaces.push((i, j));
             }
         }
     }
 
     let mut enemies = Vec::new();
-    let num_enemies = empty_spaces.len().min(max_enemies);
-    for idx in 0..num_enemies {
-        // Simple dispersión
-        let step = (empty_spaces.len() / num_enemies).max(1);
-        let (i, j) = empty_spaces[(idx * step) % empty_spaces.len()];
-        let ex = (i * BLOCK_SIZE + BLOCK_SIZE / 2) as f32;
-        let ey = (j * BLOCK_SIZE + BLOCK_SIZE / 2) as f32;
-        enemies.push(crate::enemy::Enemy::new(
-            ex,
-            ey,
-            stream_handle,
-            audio_data.clone(),
-        ));
+    if !empty_spaces.is_empty() {
+        let num_enemies = empty_spaces.len().min(max_enemies);
+        let mut seed = level as usize * 1234567;
+
+        for _ in 0..num_enemies {
+            seed = seed.wrapping_mul(1103515245).wrapping_add(12345);
+            let pos_idx = seed % empty_spaces.len();
+            let (i, j) = empty_spaces.remove(pos_idx);
+
+            let ex = (i * BLOCK_SIZE + BLOCK_SIZE / 2) as f32;
+            let ey = (j * BLOCK_SIZE + BLOCK_SIZE / 2) as f32;
+            enemies.push(crate::enemy::Enemy::new(
+                ex,
+                ey,
+                stream_handle,
+                audio_data.clone(),
+            ));
+        }
     }
 
     (maze, player, enemies)
 }
-
 
 fn main() {
     let window_width = 1300;
