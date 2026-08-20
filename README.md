@@ -36,10 +36,10 @@ El juego es un motor de renderizado pseudo-3D desarrollado en Rust, e incluye:
 | **Salir** | `ESC` |
 
 ## Demostración (Video)
-<!-- DEJA AQUÍ UN ESPACIO PARA TU VIDEO DEMOSTRATIVO -->
 
-*(Reemplazar con enlace al vídeo o archivo GIF del funcionamiento)*
+<img width="1363" height="929" alt="image" src="https://github.com/user-attachments/assets/1953502c-3e84-492f-a4ff-7c745dbc03a4" />
 
+Link de video: https://youtu.be/YzSUZzLeVt0 
 <br>
 <br>
 
@@ -103,3 +103,5 @@ Las pistas utilizadas de forma estrictamente educativa incluyen:
 - **Pantalla de Victoria:** *Long Live*
 
 Ninguno de estos audios se utiliza con intención monetaria ni comercial de ningún tipo. Todos los derechos reservados a **Taylor Swift** y su equipo.
+
+### Hugo Méndez - 241265
