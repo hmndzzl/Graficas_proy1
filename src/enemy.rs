@@ -63,24 +63,26 @@ impl Enemy {
             // Colisiones simples
             let margin = 20.0;
 
-            let check_x = self.pos.x + move_x + if move_x > 0.0 { margin } else { -margin };
-            let i_x = check_x as usize / block_size;
-            let j_x = self.pos.y as usize / block_size;
-
-            if let Some(&cell) = maze.get(j_x).and_then(|row| row.get(i_x)) {
-                if cell == ' ' || cell == 'g' || cell == 'G' {
-                    self.pos.x += move_x;
-                }
+            if crate::physics::can_move_to_x(
+                maze,
+                self.pos.x + move_x,
+                move_x,
+                self.pos.y,
+                margin,
+                block_size,
+            ) {
+                self.pos.x += move_x;
             }
 
-            let check_y = self.pos.y + move_y + if move_y > 0.0 { margin } else { -margin };
-            let i_y = self.pos.x as usize / block_size;
-            let j_y = check_y as usize / block_size;
-
-            if let Some(&cell) = maze.get(j_y).and_then(|row| row.get(i_y)) {
-                if cell == ' ' || cell == 'g' || cell == 'G' {
-                    self.pos.y += move_y;
-                }
+            if crate::physics::can_move_to_y(
+                maze,
+                self.pos.y + move_y,
+                move_y,
+                self.pos.x,
+                margin,
+                block_size,
+            ) {
+                self.pos.y += move_y;
             }
         }
 

@@ -58,25 +58,17 @@ pub fn process_events(
         let enemy_margin = 50.0; // Distancia mínima entre jugador y enemigo
 
         // Comprobar colisión en el eje X
-        let check_x = player.pos.x + dx + if dx > 0.0 { margin } else { -margin };
-        let i_x = check_x as usize / block_size;
-        let j_x = player.pos.y as usize / block_size;
+        let mut can_move_x = crate::physics::can_move_to_x(
+            maze,
+            player.pos.x + dx,
+            dx,
+            player.pos.y,
+            margin,
+            block_size,
+        );
 
-        let mut can_move_x = false;
-        if let Some(&cell) = maze.get(j_x).and_then(|row| row.get(i_x)) {
-            if cell == ' ' || cell == 'g' || cell == 'G' {
-                can_move_x = true;
-            }
-        }
-
-        if can_move_x {
-            for enemy in enemies {
-                let dist = ((player.pos.x + dx) - enemy.pos.x).hypot(player.pos.y - enemy.pos.y);
-                if dist < enemy_margin {
-                    can_move_x = false;
-                    break;
-                }
-            }
+        if can_move_x && crate::physics::check_enemy_collision(player.pos.x + dx, player.pos.y, enemies, enemy_margin) {
+            can_move_x = false;
         }
 
         if can_move_x {
@@ -84,25 +76,17 @@ pub fn process_events(
         }
 
         // Comprobar colisión en el eje Y
-        let check_y = player.pos.y + dy + if dy > 0.0 { margin } else { -margin };
-        let i_y = player.pos.x as usize / block_size;
-        let j_y = check_y as usize / block_size;
+        let mut can_move_y = crate::physics::can_move_to_y(
+            maze,
+            player.pos.y + dy,
+            dy,
+            player.pos.x,
+            margin,
+            block_size,
+        );
 
-        let mut can_move_y = false;
-        if let Some(&cell) = maze.get(j_y).and_then(|row| row.get(i_y)) {
-            if cell == ' ' || cell == 'g' || cell == 'G' {
-                can_move_y = true;
-            }
-        }
-
-        if can_move_y {
-            for enemy in enemies {
-                let dist = (player.pos.x - enemy.pos.x).hypot((player.pos.y + dy) - enemy.pos.y);
-                if dist < enemy_margin {
-                    can_move_y = false;
-                    break;
-                }
-            }
+        if can_move_y && crate::physics::check_enemy_collision(player.pos.x, player.pos.y + dy, enemies, enemy_margin) {
+            can_move_y = false;
         }
 
         if can_move_y {
