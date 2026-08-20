@@ -674,6 +674,7 @@ fn main() {
     let mut menu_state = true;
     let mut is_paused = false;
     let mut last_p_pressed = false;
+    let mut last_mouse_x: Option<f32> = None;
 
     let mut last_time = Instant::now();
     let target_frame_time = Duration::from_millis(1000 / 60); // ~16.6 ms per frame for 60 FPS
@@ -687,6 +688,7 @@ fn main() {
             if window.is_key_down(Key::Enter) {
                 menu_state = false;
                 last_time = Instant::now(); // Reset dt so enemies don't jump
+                last_mouse_x = None;
             }
         } else if !win_state && !game_over_state {
             let p_pressed = window.is_key_down(Key::P);
@@ -694,6 +696,7 @@ fn main() {
                 is_paused = !is_paused;
                 if !is_paused {
                     last_time = Instant::now();
+                    last_mouse_x = None;
                 }
             }
             last_p_pressed = p_pressed;
@@ -704,7 +707,7 @@ fn main() {
                     is_3d_mode = !is_3d_mode;
                 }
                 last_m_pressed = m_pressed;
-                process_events(&window, &mut player, &maze, &enemies, BLOCK_SIZE);
+                process_events(&window, &mut player, &maze, &enemies, BLOCK_SIZE, &mut last_mouse_x);
 
                 // Actualizar enemigos
                 for enemy in enemies.iter_mut() {
@@ -753,6 +756,7 @@ fn main() {
                 enemies = new_enemies;
                 game_over_state = false;
                 last_time = Instant::now();
+                last_mouse_x = None;
             }
         }
 

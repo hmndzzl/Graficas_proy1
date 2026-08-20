@@ -15,6 +15,7 @@ pub fn process_events(
     maze: &Maze,
     enemies: &[crate::enemy::Enemy],
     block_size: usize,
+    last_mouse_x: &mut Option<f32>,
 ) {
     const MOVE_SPEED: f32 = 3.0;
     const ROTATION_SPEED: f32 = PI / 45.0;
@@ -25,6 +26,17 @@ pub fn process_events(
 
     if window.is_key_down(Key::D) || window.is_key_down(Key::Right) {
         player.a += ROTATION_SPEED;
+    }
+
+    if let Some((mouse_x, _)) = window.get_mouse_pos(minifb::MouseMode::Pass) {
+        if let Some(last_x) = last_mouse_x {
+            let dx_mouse = mouse_x - *last_x;
+            let sensitivity = 0.003; 
+            player.a += dx_mouse * sensitivity;
+        }
+        *last_mouse_x = Some(mouse_x);
+    } else {
+        *last_mouse_x = None;
     }
 
     let mut dx = 0.0;
