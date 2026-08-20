@@ -428,52 +428,19 @@ fn draw_game_over_screen(framebuffer: &mut Framebuffer) {
         " GGG  A   A M   M EEEE    OOO    V   EEEE R   R ",
     ];
 
-    let pixel_size = 12;
-    let start_x = framebuffer.width / 2 - (text[0].len() * pixel_size) / 2;
-    let start_y = framebuffer.height / 2 - (text.len() * pixel_size) / 2;
+    let fb_height = framebuffer.height;
+    let fb_width = framebuffer.width;
 
-    framebuffer.set_current_color(0xFF0000); // Rojo
+    draw_text_pixel_art(framebuffer, &text, 12, fb_height / 4, 0xFF0000);
 
-    for (row, line) in text.iter().enumerate() {
-        for (col, ch) in line.chars().enumerate() {
-            if ch != ' ' {
-                let x = start_x + col * pixel_size;
-                let y = start_y + row * pixel_size;
-                for dy in 0..pixel_size {
-                    for dx in 0..pixel_size {
-                        framebuffer.point(x + dx, y + dy);
-                    }
-                }
-            }
-        }
-    }
+    let items = ["RESTART = R", "MENU = M"];
 
-    let prompt = [
-        "PPPP  RRRR  EEEEE SSSSS SSSSS    RRRR  ",
-        "P   P R   R E     S     S        R   R ",
-        "PPPP  RRRR  EEEEE SSSSS SSSSS    RRRR  ",
-        "P     R  R  E         S     S    R  R  ",
-        "P     R   R EEEEE SSSSS SSSSS    R   R ",
-    ];
-
-    let prompt_pixel_size = 6;
-    let prompt_x = framebuffer.width / 2 - (prompt[0].len() * prompt_pixel_size) / 2;
-    let prompt_y = start_y + text.len() * pixel_size + 60;
-
-    framebuffer.set_current_color(0xFFFFFF); // Blanco
-
-    for (row, line) in prompt.iter().enumerate() {
-        for (col, ch) in line.chars().enumerate() {
-            if ch != ' ' {
-                let x = prompt_x + col * prompt_pixel_size;
-                let y = prompt_y + row * prompt_pixel_size;
-                for dy in 0..prompt_pixel_size {
-                    for dx in 0..prompt_pixel_size {
-                        framebuffer.point(x + dx, y + dy);
-                    }
-                }
-            }
-        }
+    let text_size = 6;
+    for (i, item) in items.iter().enumerate() {
+        let text_width = item.len() * 4 * text_size;
+        let x = fb_width / 2 - text_width / 2;
+        let y = fb_height / 2 + i * (10 * text_size) + 40;
+        draw_text_simple(framebuffer, item, x, y, text_size, 0xFFFFFF);
     }
 }
 
@@ -859,6 +826,11 @@ fn main() {
                 player = new_player;
                 enemies = new_enemies;
                 game_over_state = false;
+                last_time = Instant::now();
+                last_mouse_x = None;
+            } else if window.is_key_down(Key::M) {
+                game_over_state = false;
+                menu_state = true;
                 last_time = Instant::now();
                 last_mouse_x = None;
             }
