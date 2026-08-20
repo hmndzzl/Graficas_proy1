@@ -48,7 +48,7 @@ impl Enemy {
             // max_dist ajusta desde qué tan lejos se empieza a escuchar
             let max_dist = (block_size as f32) * 4.0;
             if dist < max_dist {
-                let volume = 2.0 - (dist / max_dist);
+                let volume = 0.8 - (dist / max_dist);
                 sink.set_volume(volume.max(0.0));
             } else {
                 sink.set_volume(0.0);

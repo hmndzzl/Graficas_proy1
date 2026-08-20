@@ -8,6 +8,7 @@ mod texture;
 mod ui;
 
 use minifb::{Key, Window, WindowOptions};
+use rodio::Source;
 use std::f32::consts::PI;
 use std::time::{Duration, Instant};
 
@@ -435,6 +436,28 @@ fn main() {
         .ok()
         .map(std::sync::Arc::new);
 
+    let ootw_audio_data = std::fs::read("./assets/ootw_ts.mp3")
+        .ok()
+        .map(std::sync::Arc::new);
+
+    let play_bgm = |stream: Option<&rodio::OutputStreamHandle>,
+                    data: &Option<std::sync::Arc<Vec<u8>>>|
+     -> Option<rodio::Sink> {
+        if let (Some(handle), Some(d)) = (stream, data) {
+            if let Ok(sink) = rodio::Sink::try_new(handle) {
+                if let Ok(source) = rodio::Decoder::new(std::io::Cursor::new((**d).clone())) {
+                    sink.set_volume(1.0);
+                    sink.append(source.repeat_infinite());
+                    sink.play();
+                    return Some(sink);
+                }
+            }
+        }
+        None
+    };
+
+    let mut bgm_sink: Option<rodio::Sink> = None;
+
     let mut current_level = 1;
     let (mut maze, mut player, mut enemies) =
         load_level(current_level, stream_handle.as_ref(), audio_data.clone());
@@ -486,12 +509,22 @@ fn main() {
                 menu_state = false;
                 last_time = Instant::now(); // Reset dt so enemies don't jump
                 last_mouse_x = None;
+                if current_level == 1 && bgm_sink.is_none() {
+                    bgm_sink = play_bgm(stream_handle.as_ref(), &ootw_audio_data);
+                }
             }
         } else if !win_state && !game_over_state {
             let p_pressed = window.is_key_down(Key::P);
             if p_pressed && !last_p_pressed {
                 is_paused = !is_paused;
-                if !is_paused {
+                if is_paused {
+                    if let Some(sink) = &bgm_sink {
+                        sink.set_volume(0.4);
+                    }
+                } else {
+                    if let Some(sink) = &bgm_sink {
+                        sink.set_volume(1.0);
+                    }
                     last_time = Instant::now();
                     last_mouse_x = None;
                 }
@@ -521,6 +554,9 @@ fn main() {
                 if player.hp <= 0.0 {
                     println!("¡Has muerto! Game Over.");
                     game_over_state = true;
+                    if let Some(sink) = bgm_sink.take() {
+                        sink.stop();
+                    }
                 }
 
                 // ¿el jugador llegó a la meta? Se traduce su posición en píxeles a la
@@ -546,6 +582,9 @@ fn main() {
                             current_level + 1
                         );
                         current_level += 1;
+                        if let Some(sink) = bgm_sink.take() {
+                            sink.stop();
+                        }
                         let current_hp = player.hp;
                         let (new_maze, mut new_player, new_enemies) =
                             load_level(current_level, stream_handle.as_ref(), audio_data.clone());
@@ -572,6 +611,7 @@ fn main() {
                 game_over_state = false;
                 last_time = Instant::now();
                 last_mouse_x = None;
+                bgm_sink = play_bgm(stream_handle.as_ref(), &ootw_audio_data);
             } else if window.is_key_down(Key::M) {
                 game_over_state = false;
                 menu_state = true;
