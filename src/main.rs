@@ -185,6 +185,7 @@ fn render3d(
     texture: &Texture,
     enemies: &[crate::enemy::Enemy],
     enemy_texture: &Texture,
+    skeleton_texture: &Texture,
 ) {
     let num_rays = framebuffer.width;
     let hw = framebuffer.width as f32 / 2.0;
@@ -315,8 +316,28 @@ fn render3d(
         let sprite_left = (screen_x - sprite_width / 2.0) as isize;
         let sprite_right = (screen_x + sprite_width / 2.0) as isize;
 
-        let tex_w = enemy_texture.width as f32;
-        let tex_h = enemy_texture.height as f32;
+        let is_jump = enemy.is_jumpscare;
+        let tex = if is_jump {
+            skeleton_texture
+        } else {
+            enemy_texture
+        };
+
+        let mut tex_w = tex.width as f32;
+        let mut tex_h = tex.height as f32;
+        let mut tex_x_offset = 0;
+        let mut tex_y_offset = 0;
+
+        if is_jump {
+            tex_w = 48.0; // Ancho aproximado del cuadro del esqueleto
+            tex_h = 48.0; // Alto aproximado del cuadro
+            let frame = (enemy.animation_time * 15.0) as u32 % 10; // 10 cuadros de animación
+
+            // La fila empieza en X=6 y termina en X=458 (10 cuadros). 452 / 9 = ~50.22 píxeles de espaciado
+            let spacing = 50.22;
+            tex_x_offset = (6.0 + (frame as f32) * spacing) as u32;
+            tex_y_offset = 118; // La 3era fila empieza en Y=118
+        }
 
         for x in sprite_left..sprite_right {
             if x >= 0 && x < framebuffer.width as isize {
@@ -324,20 +345,25 @@ fn render3d(
 
                 // Z-buffer check
                 if corrected_dist < z_buffer[ux] {
-                    let tx = ((x - sprite_left) as f32 / sprite_width * tex_w) as u32;
+                    let tx =
+                        ((x - sprite_left) as f32 / sprite_width * tex_w) as u32 + tex_x_offset;
 
                     let y_top = sprite_top.max(0) as usize;
                     let y_bottom = sprite_bottom.min(framebuffer.height as isize) as usize;
 
                     for y in y_top..y_bottom {
-                        let ty = ((y as isize - sprite_top) as f32 / sprite_height * tex_h) as u32;
-                        let color = enemy_texture.get_pixel_color(tx, ty);
+                        let ty = ((y as isize - sprite_top) as f32 / sprite_height * tex_h) as u32
+                            + tex_y_offset;
 
-                        // Ignorar píxeles transparentes (asumiendo que alpha > 0 es opaco)
-                        let alpha = (color >> 24) & 0xFF;
-                        if alpha > 0 {
-                            framebuffer.set_current_color(color);
-                            framebuffer.point(ux, y);
+                        if tx < tex.width && ty < tex.height {
+                            let color = tex.get_pixel_color(tx, ty);
+
+                            // Ignorar píxeles transparentes (asumiendo que alpha > 0 es opaco)
+                            let alpha = (color >> 24) & 0xFF;
+                            if alpha > 0 {
+                                framebuffer.set_current_color(color);
+                                framebuffer.point(ux, y);
+                            }
                         }
                     }
                 }
@@ -407,6 +433,41 @@ fn load_level(
                 ey,
                 stream_handle,
                 audio_data.clone(),
+                false,
+            ));
+        }
+
+        if (level == 2 || level == 3) && !empty_spaces.is_empty() {
+            // Buscar la posición de la meta
+            let mut goal_x = 0;
+            let mut goal_y = 0;
+            for (j, row) in maze.iter().enumerate() {
+                for (i, &cell) in row.iter().enumerate() {
+                    if cell == 'g' || cell == 'G' {
+                        goal_x = i;
+                        goal_y = j;
+                    }
+                }
+            }
+
+            // Encontrar el espacio vacío más cercano a la meta
+            let mut closest_idx = 0;
+            let mut min_dist = f32::MAX;
+            for (idx, &(i, j)) in empty_spaces.iter().enumerate() {
+                let dist = ((i as f32 - goal_x as f32).powi(2) + (j as f32 - goal_y as f32).powi(2)).sqrt();
+                if dist < min_dist {
+                    min_dist = dist;
+                    closest_idx = idx;
+                }
+            }
+            
+            let (i, j) = empty_spaces.remove(closest_idx);
+
+            let ex = (i * BLOCK_SIZE + BLOCK_SIZE / 2) as f32;
+            let ey = (j * BLOCK_SIZE + BLOCK_SIZE / 2) as f32;
+            enemies.push(crate::enemy::Enemy::new(
+                ex, ey, None, // Sin sonido
+                None, true,
             ));
         }
     }
@@ -475,6 +536,8 @@ fn main() {
         Texture::new("./assets/textures.png").expect("No se pudo cargar ./assets/textures.png");
     let enemy_texture =
         Texture::new("./assets/sat.png").expect("No se pudo cargar ./assets/sat.png");
+    let skeleton_texture =
+        Texture::new("./assets/skeleton.png").expect("No se pudo cargar ./assets/skeleton.png");
 
     let mut framebuffer = Framebuffer::new(framebuffer_width, framebuffer_height);
     framebuffer.set_background_color(0x333355);
@@ -654,6 +717,7 @@ fn main() {
                     &texture,
                     &enemies,
                     &enemy_texture,
+                    &skeleton_texture,
                 );
             } else {
                 render2d(&mut framebuffer, &maze, &player, &enemies);

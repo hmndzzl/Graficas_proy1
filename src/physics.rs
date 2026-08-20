@@ -46,6 +46,7 @@ pub fn check_enemy_collision(
     enemy_margin: f32,
 ) -> bool {
     for enemy in enemies {
+        if enemy.is_jumpscare || !enemy.active { continue; }
         let dist = (new_x - enemy.pos.x).hypot(new_y - enemy.pos.y);
         if dist < enemy_margin {
             return true;
