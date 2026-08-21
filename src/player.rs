@@ -67,7 +67,7 @@ pub fn process_events(
             block_size,
         );
 
-        if can_move_x && crate::physics::check_enemy_collision(player.pos.x + dx, player.pos.y, enemies, enemy_margin) {
+        if can_move_x && crate::physics::check_enemy_collision(player.pos.x, player.pos.y, player.pos.x + dx, player.pos.y, enemies, enemy_margin) {
             can_move_x = false;
         }
 
@@ -85,7 +85,7 @@ pub fn process_events(
             block_size,
         );
 
-        if can_move_y && crate::physics::check_enemy_collision(player.pos.x, player.pos.y + dy, enemies, enemy_margin) {
+        if can_move_y && crate::physics::check_enemy_collision(player.pos.x, player.pos.y, player.pos.x, player.pos.y + dy, enemies, enemy_margin) {
             can_move_y = false;
         }
 

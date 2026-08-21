@@ -40,6 +40,8 @@ pub fn can_move_to_y(
 }
 
 pub fn check_enemy_collision(
+    current_x: f32,
+    current_y: f32,
     new_x: f32,
     new_y: f32,
     enemies: &[Enemy],
@@ -47,8 +49,9 @@ pub fn check_enemy_collision(
 ) -> bool {
     for enemy in enemies {
         if enemy.is_jumpscare || !enemy.active { continue; }
-        let dist = (new_x - enemy.pos.x).hypot(new_y - enemy.pos.y);
-        if dist < enemy_margin {
+        let current_dist = (current_x - enemy.pos.x).hypot(current_y - enemy.pos.y);
+        let new_dist = (new_x - enemy.pos.x).hypot(new_y - enemy.pos.y);
+        if new_dist < enemy_margin && new_dist < current_dist {
             return true;
         }
     }
