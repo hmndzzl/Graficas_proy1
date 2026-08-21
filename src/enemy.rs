@@ -11,6 +11,7 @@ pub struct Enemy {
     pub is_jumpscare: bool,
     pub animation_time: f32,
     pub active: bool,
+    pub cooldown: f32,
 }
 
 impl Enemy {
@@ -41,10 +42,24 @@ impl Enemy {
             is_jumpscare,
             animation_time: 0.0,
             active: true,
+            cooldown: 0.0,
         }
     }
 
     pub fn update(&mut self, player: &mut Player, dt: f32, maze: &Maze, block_size: usize) {
+        if self.is_jumpscare && !self.active {
+            self.cooldown -= dt;
+            if self.cooldown <= 0.0 {
+                self.active = true;
+                // Respawn 10 blocks away behind the player
+                let spawn_dist = (block_size as f32) * 10.0;
+                let spawn_angle = player.a + std::f32::consts::PI; // behind
+                self.pos.x = player.pos.x + spawn_angle.cos() * spawn_dist;
+                self.pos.y = player.pos.y + spawn_angle.sin() * spawn_dist;
+            }
+            return;
+        }
+
         if !self.active {
             return;
         }
@@ -53,14 +68,21 @@ impl Enemy {
             self.animation_time += dt;
         }
 
-        let speed = if self.is_jumpscare { 200.0 } else { 90.0 };
         let dx = player.pos.x - self.pos.x;
         let dy = player.pos.y - self.pos.y;
         let dist = (dx * dx + dy * dy).sqrt();
 
+        if self.is_jumpscare && dist > (block_size as f32) * 5.0 {
+            // Esperar a que el jugador se acerque para asustarlo
+            return;
+        }
+
+        let speed = if self.is_jumpscare { 200.0 } else { 90.0 };
+
         // Desactivar jumpscare si toca al jugador (no hace daño)
         if self.is_jumpscare && dist < (block_size as f32) {
             self.active = false;
+            self.cooldown = 1.0; // 1 segundo de espera antes de volver a asustar
             return;
         }
 

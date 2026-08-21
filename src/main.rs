@@ -104,7 +104,7 @@ fn render_map(
 
     // Dibujar enemigos en rojo
     framebuffer.set_current_color(0xFF0000);
-    for enemy in enemies {
+    for enemy in enemies.iter().filter(|e| e.active) {
         let dx = enemy.pos.x - player.pos.x;
         let dy = enemy.pos.y - player.pos.y;
         let dist = dx.hypot(dy);
@@ -265,7 +265,7 @@ fn render3d(
     }
 
     // Renderizar enemigos (Billboarding)
-    let mut sorted_enemies: Vec<&crate::enemy::Enemy> = enemies.iter().collect();
+    let mut sorted_enemies: Vec<&crate::enemy::Enemy> = enemies.iter().filter(|e| e.active).collect();
     // Ordenar por distancia, el más lejano primero
     sorted_enemies.sort_by(|a, b| {
         let dist_a = (a.pos.x - player.pos.x).powi(2) + (a.pos.y - player.pos.y).powi(2);
