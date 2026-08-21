@@ -52,7 +52,7 @@ impl Enemy {
             if self.cooldown <= 0.0 {
                 self.active = true;
                 // Respawn 10 blocks away behind the player
-                let spawn_dist = (block_size as f32) * 10.0;
+                let spawn_dist = (block_size as f32) * 5.0;
                 let spawn_angle = player.a + std::f32::consts::PI; // behind
                 self.pos.x = player.pos.x + spawn_angle.cos() * spawn_dist;
                 self.pos.y = player.pos.y + spawn_angle.sin() * spawn_dist;
