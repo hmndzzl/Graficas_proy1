@@ -32,6 +32,7 @@ const FONT_DATA: &[(char, &[u8])] = &[
     ('(', &[0b010, 0b100, 0b100, 0b100, 0b010]),
     (')', &[0b010, 0b001, 0b001, 0b001, 0b010]),
     (' ', &[0b000, 0b000, 0b000, 0b000, 0b000]),
+    ('!', &[0b010, 0b010, 0b010, 0b000, 0b010]),
 ];
 
 const NUMBER_FONT: [[u8; 15]; 10] = [
@@ -247,18 +248,16 @@ pub fn draw_game_over_screen(framebuffer: &mut Framebuffer) {
     framebuffer.set_background_color(0x000000);
     framebuffer.clear();
 
-    let text = [
-        " GGG   AAA  M   M EEEE    OOO  V   V EEEE RRRR  ",
-        "G     A   A MM MM E      O   O V   V E    R   R ",
-        "G  GG AAAAA M M M EEEE   O   O V   V EEEE RRRR  ",
-        "G   G A   A M   M E      O   O  V V  E    R  R  ",
-        " GGG  A   A M   M EEEE    OOO    V   EEEE R   R ",
-    ];
-
     let fb_height = framebuffer.height;
     let fb_width = framebuffer.width;
 
-    draw_text_pixel_art(framebuffer, &text, 12, fb_height / 4, 0xFF0000);
+    let title = "LA SAT TE HA ATRAPADO!";
+    let title_size = 12;
+    let title_width = title.len() * 4 * title_size;
+    let title_x = fb_width / 2 - title_width / 2;
+    let title_y = fb_height / 4;
+    
+    draw_text_simple(framebuffer, title, title_x, title_y, title_size, 0xFF0000);
 
     let items = ["RESTART = R", "MENU = M"];
 
